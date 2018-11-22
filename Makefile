@@ -22,6 +22,12 @@ $(output) : $(obj)
 	@echo "Compiling $@.";\
 	$(cc) $(flags) $(defines) -c $< -o $@
 
+# run
+.PHONY: run
+run:
+	@printf "";\
+	./model
+
 # clean
 .PHONY: clean
 clean:
