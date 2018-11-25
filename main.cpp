@@ -70,7 +70,7 @@ class Pipe: public Event {
             if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
             else std::cerr << " planned " << sending.at(Time+d) << ".\n";
 
-            if(sending.count(Time + d) == 0) {
+            if(sending.count(Time + d) == 0 && ((i++%10)==0)) {
                 std::cerr << Time << ") Pipe " << mname << ": Reactivate at " << Time + d << ".\n";
                 Activate(Time + d);
             }
@@ -100,6 +100,8 @@ class Pipe: public Event {
         InputLimiter il;
         double d;
         Callback moutput;
+
+        int i=0;
 
         std::map<double, double> sending;
         Flagger f;
@@ -148,7 +150,7 @@ class OilPipeline {
     public:
         OilPipeline(std::string name, double maxProduction, double producing, double delay):
             mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
-            
+
             p = new Pipe(mname, mmaximum, mdelay, getOutput());
             s = new Source(mname, producing, p->getInput());
             s->Activate();
