@@ -78,7 +78,7 @@ class OilPipeline {
     public:
         OilPipeline(double delay, double maxProduction, double producing):
             mdelay(delay), mmaximum(maxProduction), mproducing(producing) {
-            
+
             p = new Pipe(mdelay, mmaximum, getOutput());
             s = new Source(producing, p->getInput());
             s->Activate(Time);
@@ -91,7 +91,7 @@ class OilPipeline {
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
         void setOutput(Callback output) { moutput = output; }
-        
+
     private:
         double mdelay;
         double mmaximum;
@@ -125,6 +125,27 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
+class Central{
+    public:
+        Central(Rafinery *kr, Rafinery *lit):
+            Kralupy(kr), Litvinov(lit) {}
+        void Enter(double amount) {
+            std::cerr << Time << ") Central: Received " << amount << "\n";
+            koutput = Kralupy->getInput();
+            loutput = Litvinov->getInput();
+            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Kralupy\n";
+            koutput(amount/2.0);
+            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Litvinov\n";
+            loutput(amount/2.0);
+        }
+        Callback getInput() { return [this](double amount){this->Enter(amount);}; }
+    private:
+        Callback koutput;
+        Callback loutput;
+        Rafinery *Kralupy;
+        Rafinery *Litvinov;
+};
+
 struct Products {
 	double benzin = 0;
 	double naphta = 0;
@@ -138,14 +159,17 @@ class Simulator: public Event {
             IKL = new OilPipeline(2, 200, 100);
             Kralupy = new Rafinery(5, 200);
             Litvinov = new Rafinery(5, 200);
+            CentralaKralupy = new Central(Kralupy, Litvinov);
 
-            Druzba->setOutput( Kralupy->getInput() );
+            Druzba->setOutput( CentralaKralupy->getInput() );
+            //Druzba->setOutput( Kralupy->getInput() );
         }
     private:
         OilPipeline* Druzba;
         OilPipeline* IKL;
         Rafinery* Kralupy;
         Rafinery* Litvinov;
+        Central* CentralaKralupy;
 };
 
 int main() {
