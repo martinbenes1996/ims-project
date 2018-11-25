@@ -82,6 +82,8 @@ class Flagger {
         }
         void Set() { mbroken = true; }
         void Reset() { mbroken = false; }
+        void Set(bool v) { mbroken = !v; }
+        bool IsSet() { return mbroken; }
     private:
         bool mbroken = false;
 };
@@ -131,6 +133,7 @@ class Pipe {
             mname(name), il(maximum), d(delay), moutput(output) {
         }
         void Send(double amount) {
+            amount = f.Check(amount);
             PlanSending(amount, Time);
 
             if(sending.count(Time + d) != 0) {
@@ -144,8 +147,9 @@ class Pipe {
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
         void setOutput(Callback output) { moutput = output; }
 
-        void SetBroken() { f.Set(); }
-        void SetWorking() { f.Reset(); }
+        void Break() { f.Set(); }
+        void Fix() { f.Reset(); }
+        bool IsBroken() { return f.IsSet(); }
 
     private:
         std::string mname;
@@ -186,6 +190,7 @@ class Reserve {
         Callback getInput() { return [this](double amount){ this->Received(amount); }; }
 
         void Received(double amount) {
+            (void)amount;
             #ifdef RESERVE_LOG
                 std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
             #endif
@@ -230,7 +235,10 @@ class OilPipeline {
         }
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
-        bool IsBroken() { return broken; }   // returns true if the refinery is broken
+
+        bool IsBroken() { return p->IsBroken(); }   // returns true if the refinery is broken
+        void Break() { p->Break(); }
+        void Fix() { p->Fix(); }
 
         void setOutput(Callback output) { moutput = output; }
 
@@ -268,6 +276,7 @@ class Rafinery: public Event {
         Rafinery(std::string name, double maxProcessing, double delay):
             mname(name), il(maxProcessing), d(delay) {}
         void Enter(double amount) {
+            amount = f.Check(amount);
             PlanProcessing(amount, Time);
 
             if(processing.count(Time) > 0) {
@@ -287,7 +296,9 @@ class Rafinery: public Event {
             processing.erase(Time);
         }
 
-        bool IsBroken() { return broken; }
+        bool IsBroken() { return f.IsSet(); }
+        void Break() { f.Set(); }
+        void Fix() { f.Reset(); }
 
         void output(Products p) {
             #ifdef RAFINERY_LOG
@@ -306,7 +317,7 @@ class Rafinery: public Event {
         std::string mname;
         InputLimiter il;
         double d;
-        bool broken = false;
+        Flagger f;
 
         double maxStorage = 100;
         std::map<double, double> processing;
@@ -591,20 +602,20 @@ class Simulator: public Process {
                         newinput = true;
                         if(split.size() == 2) {
                             if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
-                                if(fix) std::cerr << "Fix ";
-                                else std::cerr << "Break ";
+                                if(fix) { Druzba->Fix(); std::cerr << "Fix "; }
+                                else { Druzba->Break(); std::cerr << "Break "; }
                                 std::cerr << "Druzba.\n";
                             } else if(split[1] == "ikl" || split[1] == "i") {
-                                if(fix) std::cerr << "Fix ";
-                                else std::cerr << "Break ";
+                                if(fix) { IKL->Fix(); std::cerr << "Fix "; }
+                                else { IKL->Break(); std::cerr << "Break "; }
                                 std::cerr << "IKL.\n";
                             } else if(split[1] == "kralupy" || split[1] == "k") {
-                                if(fix) std::cerr << "Fix ";
-                                else std::cerr << "Break ";
+                                if(fix) { Kralupy->Fix(); std::cerr << "Fix "; }
+                                else { Kralupy->Break(); std::cerr << "Break "; }
                                 std::cerr << "Kralupy.\n";
                             } else if(split[1] == "litvinov" || split[1] == "l") {
-                                if(fix) std::cerr << "Fix ";
-                                else std::cerr << "Break ";
+                                if(fix) { Litvinov->Fix(); std::cerr << "Fix "; }
+                                else { Litvinov->Break(); std::cerr << "Break "; }
                                 std::cerr << "Litvinov.\n";
                             } else {
                                 std::cerr << "Invalid input.\n";
