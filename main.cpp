@@ -130,7 +130,7 @@ class OilPipeline {
         OilPipeline(std::string name, double maxProduction, double producing, double delay):
             mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
             
-            p = new Pipe(mname, mmaximum, mdelay,  getOutput());
+            p = new Pipe(mname, mmaximum, mdelay, getOutput());
             s = new Source(mname, producing, p->getInput());
             s->Activate();
         }
