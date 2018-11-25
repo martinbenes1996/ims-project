@@ -1,8 +1,10 @@
 
+#include <cstring>
 #include <iostream>
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "simlib.h"
 
@@ -257,9 +259,9 @@ class Rafinery: public Event {
 
         void output(Products p) {
             #ifdef RAFINERY_LOG
-                std::cerr << Time << ") Rafinery " << mname << ": Processed ["<<"benzin:"<<p.benzin<<","
-                                                                              <<"naphta:"<<p.naphta<<","
-                                                                              <<"asphalt:"<<p.asphalt<<"].\n";
+                std::cerr << Time << ") Rafinery " << mname << ": Processed ["<<"b:"<<p.benzin<<", "
+                                                                              <<"n:"<<p.naphta<<", "
+                                                                              <<"a:"<<p.asphalt<<"].\n";
             #endif
             mproductor(p);
         }
@@ -335,6 +337,8 @@ class Central {
 class Simulator: public Process {
     public:
         Simulator() {
+            Activate();
+
             Druzba = new OilPipeline("Druzba", 24.66, 10.55, 3);
             IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
@@ -366,14 +370,24 @@ class Simulator: public Process {
             };
             Druzba->setOutput( CentralInputFromDruzba );
             IKL->setOutput( CentralInputFromIKL );
-            
-            Activate();
         }
 
         void AcquireProducts(Products p) {
             mproducts += p;
         }
         Productor getProductor() { return [this](Products p){ this->AcquireProducts(p); }; }
+
+        std::vector<std::string> SplitString(std::string str) {
+            std::vector<std::string> v;
+            char * s = strdup(str.c_str());
+            char * c = strtok(s, " \t");
+            while(c != NULL) {
+                v.push_back( std::string(c) );
+                c = strtok(NULL, " \t");
+            }
+            free(s);
+            return v;
+        }
 
         void Behavior() {
             do {
@@ -382,6 +396,31 @@ class Simulator: public Process {
                 #endif
                 //CTR->Send(1);
                 //CTR->Request(1);
+                
+                std::string line;
+                do {
+                    std::cout << ">> " << std::flush;
+                    getline(std::cin, line);
+                } while(line.size() == 0);
+                
+                std::vector<std::string> split = SplitString(line);
+                if(split.size() == 0) {
+                } if(split[0] == "day" || split[0] == "d") {
+                } else if(split[0] == "request" || split[0] == "rq") {
+                    if(split.size() <= 1) {
+                        // missing
+                    } else if(split[1] == "benzin" || split[1] == "natural" || split[1] == "b") {
+                        // split2 is benzin request value
+                    } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" || split[1] == "diesel" || split[1] == "d") {
+                        // split2 is naphta request value
+                    } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
+                        // split2 is asfalt request value
+                    } else {
+                        // error
+                    }
+                } else {
+                    
+                }
                 Wait(1);
             } while(true);
         }
