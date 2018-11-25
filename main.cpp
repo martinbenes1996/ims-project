@@ -12,7 +12,7 @@ typedef std::function<void(double)> Callback;
 
 #ifdef OUTPUT_LOG
     //#define SOURCE_LOG
-    #define PIPES_LOG
+    //#define PIPES_LOG
     //#define FLAGGER_LOG
     //#define SIMULATOR_LOG
     //#define RAFINERY_LOG
@@ -22,6 +22,11 @@ typedef std::function<void(double)> Callback;
     //#define TRANSFER_LOG
     //#define RESERVE_LOG
 #endif
+
+struct ConsoleFirst {
+    Facility waitForConsole;
+    double t = Time;
+} EventOrder;
 
 struct Products {
 	double benzin = 0;
@@ -37,16 +42,26 @@ struct Products {
 };
 typedef std::function<void(Products)> Productor;
 
-class Source : public Event {
+class Source : public Process {
     public:
         Source(std::string name, double production, Callback output):
             mname(name), mproduction(production), moutput(output) {}
         void Behavior() {
-            #ifdef SOURCE_LOG
-                std::cerr << Time << ") Source " << mname << ": Produced " << mproduction << ".\n";
-            #endif
-            moutput(mproduction);
-            Activate(Time+1);
+            do {
+
+                bool seize = (Time >= EventOrder.t);
+                if(seize) Seize(EventOrder.waitForConsole);
+
+                #ifdef SOURCE_LOG
+                    std::cerr << Time << ") Source " << mname << ": Produced " << mproduction << ".\n";
+                #endif
+                moutput(mproduction);
+
+                if(seize) Release(EventOrder.waitForConsole);
+                Wait(1);   
+            } while(true);
+
+            
         }
     private:
         std::string mname;
@@ -80,16 +95,27 @@ class InputLimiter {
         double mmaximum;
 };
 
-class Transfer: public Event {
+class Transfer: public Process {
     public:
         Transfer(double amount, Callback output):
-            mamount(amount), moutput(output) {}
+            mamount(amount), moutput(output) {
+            #ifdef TRANSFER_LOG
+                std::cerr << Time << ") Transfer of " << mamount << " initialized.\n";
+            #endif
+        }
 
         void Behavior() {
+            bool seize = (Time >= EventOrder.t);
+            if(seize) {
+                Seize(EventOrder.waitForConsole);
+            }
             #ifdef TRANSFER_LOG
                 std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
             #endif
             moutput(mamount);
+            if(seize) {
+                Release(EventOrder.waitForConsole);
+            }
         }
 
 
@@ -231,6 +257,7 @@ class FractionalDestillation: public Event {
             p.asphalt = 0.13*mamount;
             moutput(p);
         }
+
     private:
         double mamount;
         Productor moutput;
@@ -298,14 +325,28 @@ class Rafinery: public Event {
         }
         Productor mproductor;
 };
+// constants from documentation
+const double IKL_Ratio = 0.484863281;
+const double Druzba_Ratio = 0.515136718;
+const double Kralupy_Ratio = 0.379353755;
+const double Litvinov_Ratio = 0.620646244;
+
+const double Fraction_Benzin = 0.19;
+const double Fraction_Naphta = 0.42;
+const double Fraction_Asphalt = 0.13;
 
 struct CentInputRatio{
-    double IKL = 0.484863281;
-    double Druzba = 0.515136718;
+    double IKL = IKL_Ratio;
+    double Druzba = Druzba_Ratio;
 };
 struct CentOutputRatio{
-    double Kralupy = 0.379353755;
-    double Litvinov = 0.620646244;
+    double Kralupy = Kralupy_Ratio;
+    double Litvinov = Litvinov_Ratio;
+};
+struct Demand{
+    double benzin = 0;
+    double naphta = 0;
+    double asphalt = 0;
 };
 
 class Central {
@@ -318,8 +359,10 @@ class Central {
             }
         void Enter(double amount) {
             // check for disasters
-            if(!Druzba->IsBroken() && !IKL->IsBroken())             // if everything is normal (99% of all checks)
-            {}
+            if(!Druzba->IsBroken() && !IKL->IsBroken()) {           // if everything is normal (99% of all checks)
+                input.Druzba = Druzba_Ratio;
+                input.IKL = IKL_Ratio;
+            }
             else if(Druzba->IsBroken() && IKL->IsBroken()) {
                 input.Druzba = 0;
                 input.IKL = 0;
@@ -333,8 +376,10 @@ class Central {
                 input.IKL = 0;
             }
 
-            if(!Kralupy->IsBroken() && !Litvinov->IsBroken())       // if everything is normal (99% of all checks)
-            {}
+            if(!Kralupy->IsBroken() && !Litvinov->IsBroken()) {     // if everything is normal (99% of all checks)
+                output.Kralupy = Kralupy_Ratio;
+                output.Litvinov = Litvinov_Ratio;
+            }
             else if(Kralupy->IsBroken() && Litvinov->IsBroken()) {
                 output.Kralupy = 0;
                 output.Litvinov = 0;
@@ -348,17 +393,28 @@ class Central {
                 output.Litvinov = 0;
             }
 
-            // reserve interactions
-            double missing = CTR->Missing();
-            missing = 5.0;
-            if(missing) {
-                #ifdef DISTRIBUTE_LOG
-                    std::cerr << Time << ") Central: Sending " << ((missing<=amount)?missing:amount) << " to CTR\n";
-                #endif
-                CTR->getInput()((missing<=amount)?missing:amount);
-                amount = (missing<amount)?amount-missing:0.0;
-                //std::cout << amount << "\n";
+            // demand correction - DEMAND FIRST, RESERVE SECOND
+            double demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
+            if(demandOil > amount) {
+                // ask reserve for oil
+                // CTR->Request(demandOil-amount);
+                // potrebuju se od rezervy dozvedet, kolik ropy jsem dostal
+                // + je opravdu potreba to posilat trubkou s delay 0?
             }
+            else {
+                // reserve interactions
+                double missing = CTR->Missing();
+                double canSend = amount - demandOil;
+                if(missing && canSend != 0.0) {
+                    #ifdef DISTRIBUTE_LOG
+                        std::cerr << Time << ") Central: Sending " << ((missing<=amount)?missing:amount) << " to CTR\n";
+                    #endif
+                    CTR->getInput()((missing<=canSend)?missing:canSend);
+                    amount = (missing<=canSend)?amount-missing:amount-canSend;
+                }
+            }
+            // TODO: reflektovat potrebu ropy - vyslat pozadavek na ropovody (missing,demand,amount,input)
+
 
             #ifdef DISTRIBUTE_LOG
                 std::cerr << Time << ") Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
@@ -371,8 +427,14 @@ class Central {
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
+        void setDemand(struct Demand d) { demand.asphalt = d.asphalt; demand.benzin = d.benzin; demand.naphta = d.naphta; }
+
         void Behavior() {}
     private:
+        double max_3(double b, double n, double a) {
+            double maximum = (b>n)?b:n;
+            return (maximum>a)?maximum:a;
+        }
         struct CentInputRatio input;        // current ratio of input - negotiate with OilPipelines
         struct CentOutputRatio output;      // current ratio of output - negotiate with Rafinery
         Callback koutput;                   // output of central - input function of Kralupy
@@ -383,6 +445,7 @@ class Central {
         OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
         Reserve* CTR;
+        struct Demand demand;
 };
 
 class Simulator: public Process {
@@ -445,10 +508,10 @@ class Simulator: public Process {
                 #endif
                 bool newinput = false;
                 bool invalid = false;
+                std::string line;
                 do {
                     newinput = false;
                     invalid = false;
-                    std::string line;
                     std::cout << ">> " << std::flush;
                     getline(std::cin, line);
                     if(std::cin.eof()) { std::cout << "Quit\n"; exit(0); }
@@ -464,7 +527,7 @@ class Simulator: public Process {
                       || split[0] == "d"
                       || split[0] == "next"
                       || split[0] == "n") {            
-                        std::cerr << "Next day.\n";
+                        std::cerr << "Day "<<Time<<".\n";
 
                     // change request
                     } else if(split[0] == "request"
@@ -536,7 +599,11 @@ class Simulator: public Process {
                     if(!invalid) mem = line;
                 } while(newinput || invalid);
                 
+                EventOrder.t = Time+1;
+                Seize(EventOrder.waitForConsole);
                 Wait(1);
+                Release(EventOrder.waitForConsole);
+
             } while(true);
         }
 
@@ -550,6 +617,7 @@ class Simulator: public Process {
 
         Products mproducts;
         Pipe* Cent_Litvinov_Pipe;
+        struct Demand demand;
 };
 
 int main() {
