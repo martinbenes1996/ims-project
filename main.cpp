@@ -125,6 +125,23 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
+class Simulator: public Event {
+    public:
+        Simulator() {
+            Druzba = new OilPipeline(2, 200, 100);
+            IKL = new OilPipeline(2, 200, 100);
+            Kralupy = new Rafinery(5, 200);
+            Litvinov = new Rafinery(5, 200);
+
+            Druzba->setOutput( Kralupy->getInput() );
+        }
+    private:
+        OilPipeline* Druzba;
+        OilPipeline* IKL;
+        Rafinery* Kralupy;
+        Rafinery* Litvinov;
+};
+
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
     Init(0,1000);
