@@ -17,6 +17,12 @@ with following commands
 - next/n *computes another day*
 - demand/d [comodity [<number>]] *manages demand*
 
+Comodity might be one of following three
+
+- *benzin*: benzin / b 
+- *diesel*: naphta / nafta / diesel / d / n 
+- *asphalt*: asphalt / asfalt / a
+
 Examples:
 
 - demand/d *shows current demand*
