@@ -57,7 +57,21 @@ class InputLimiter {
         double mmaximum;
 };
 
-class Pipe: public Event {
+class Transfer: public Event {
+    public:
+        Transfer(double amount, Callback output):
+            mamount(amount), moutput(output) {}
+
+        void Behavior() {
+            std::cerr << "Behavior of " << this << "\n";
+            moutput(mamount);
+        }
+
+    private:
+        double mamount;
+        Callback moutput;
+};
+class Pipe {
     public:
         Pipe(std::string name, double maximum, double delay, Callback output=[](double){ std::cerr << "Output not set!\n"; }):
             mname(name), il(maximum), d(delay), moutput(output) {
@@ -65,20 +79,17 @@ class Pipe: public Event {
         void Send(double amount) {
             std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
 
-            /*
-            std::cerr << Time << ") Pipe " << mname << ": for time " << Time+d;
-            if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
-            else std::cerr << " planned " << sending.at(Time+d) << ".\n";
+            
+            //std::cerr << Time << ") Pipe " << mname << ": for time " << Time+d;
+            //if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
+            //else std::cerr << " planned " << sending.at(Time+d) << ".\n";
 
-            if(sending.count(Time + d) == 0 && ((i++%10)==0)) {
-                std::cerr << Time << ") Pipe " << mname << ": Reactivate at " << Time + d << ".\n";
-                Activate(Time + d);
+            if(sending.count(Time + d) == 0) {
+                //std::cerr << Time << ") Pipe " << mname << ": Reactivate at " << Time + d << ".\n";
+                (new Transfer(sending[Time], moutput))->Activate(Time + d);
             }
             sending[Time + d] += amount;
-            */
 
-            sending[Time + d] = amount;
-            Activate(Time + d);
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
@@ -87,11 +98,6 @@ class Pipe: public Event {
             moutput = output;
         }
 
-        void Behavior() {
-            std::cerr << "Behavior of " << this << "\n";
-            moutput(sending[Time]);
-            sending.erase(Time);
-        }
         void SetBroken() { f.Set(); }
         void SetWorking() { f.Reset(); }
 
