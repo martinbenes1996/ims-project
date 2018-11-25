@@ -23,15 +23,9 @@ Comodity might be one of following three
 - *diesel*: naphta / nafta / diesel / d / n 
 - *asphalt*: asphalt / asfalt / a
 
-Examples:
+Number, as a third parameter, is set as new value for demand
+of the chosen comodity, for example *demand benzin 5*.
 
-- demand/d *shows current demand*
-- demand/d benzin/b *shows current demand for benzin*
-- demand/d naphta/nafta/diesel/n/d *shows current demand for diesel*
-- demand/d asphalt/asfalt/a *shows current demand for asfalt*
-- demand/d benzin/natural/b <number> *sets demand for benzin to number*
-- demand/d naphta/nafta/diesel/n/d <number> *sets demand for diesel to number*
-- demand/d asphalt/asfalt/a <number> *sets demand for asfalt to number*
 
 
 
