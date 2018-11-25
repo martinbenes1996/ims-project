@@ -344,15 +344,15 @@ struct CentOutputRatio{
     double Litvinov = Litvinov_Ratio;
 };
 struct Demand{
-    double benzin = 0;
-    double naphta = 0;
-    double asphalt = 0;
+    double benzin = 4.38;
+    double naphta = 12.96;
+    double asphalt = 1.21;
 };
 
 class Central {
     public:
-        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr):
-            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr)
+        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr, Demand& d):
+            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr), demand(d)
             {
                 koutput = Kralupy->getInput();
                 loutput = LitPipe->getInput();
@@ -427,7 +427,7 @@ class Central {
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
-        void setDemand(struct Demand d) { demand.asphalt = d.asphalt; demand.benzin = d.benzin; demand.naphta = d.naphta; }
+        void setDemand(struct Demand& d) { demand = d; }
 
         void Behavior() {}
     private:
@@ -445,7 +445,7 @@ class Central {
         OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
         Reserve* CTR;
-        struct Demand demand;
+        struct Demand& demand;
 };
 
 class Simulator: public Process {
@@ -466,7 +466,7 @@ class Simulator: public Process {
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
             );
 
-            CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR);
+            CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR, demand);
             Callback CentralInputFromDruzba = [this](double amount) {
                 #ifdef CENTRAL_LOG
                     std::cerr << Time << ") Central: Received " << amount << " from Druzba.\n";
@@ -523,25 +523,25 @@ class Simulator: public Process {
                         newinput = true;
 
                     // next day
-                    } else if(split[0] == "day"
-                      || split[0] == "d"
-                      || split[0] == "next"
+                    } else if(split[0] == "next"
                       || split[0] == "n") {            
                         std::cerr << "Day "<<Time<<".\n";
 
                     // change request
-                    } else if(split[0] == "request"
-                           || split[0] == "req"
-                           || split[0] == "rq") {
+                    } else if(split[0] == "demand"
+                           || split[0] == "d") {
                         if(split.size() <= 1) { // print all request values
-                            std::cerr << "Request values:\n";
+                            std::cout << "Current demand:\n";
+                            std::cout << "- benzin: " << demand.benzin << "\n";
+                            std::cout << "- naphta: " << demand.naphta << "\n";
+                            std::cout << "- asphalt: " << demand.asphalt << "\n";
                             newinput = true;
                         // benzin    
                         } else if(split[1] == "benzin" 
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
-                                std::cerr << "Benzin demand:\n";
+                                std::cout << "Benzin demand: " << demand.benzin << "\n";
                                 newinput = true;
                             } else if(split.size() == 3) {  // set benzin request value
                                 double val = std::stod(split[2]);
@@ -557,6 +557,7 @@ class Simulator: public Process {
                                || split[1] == "diesel" || split[1] == "d") {
                             if(split.size() == 2) {         // print naphta request value
                                 std::cerr << "Maphta demand:\n";
+                                std::cout << "Naphta demand: " << demand.naphta << "\n";
                                 newinput = true;
                             } else if(split.size() == 3) {  // set naphta request value
                                 double val = std::stod(split[2]);
@@ -570,7 +571,7 @@ class Simulator: public Process {
                         // asphalt
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
-                                std::cerr << "Asphalt demand:\n";
+                                std::cout << "Asphalt demand: " << demand.asphalt << "\n";
                                 newinput = true;
                             } else if(split.size() == 3) {  // set asphalt request value
                                 double val = std::stod(split[2]);
@@ -617,7 +618,7 @@ class Simulator: public Process {
 
         Products mproducts;
         Pipe* Cent_Litvinov_Pipe;
-        struct Demand demand;
+        Demand demand;
 };
 
 int main() {
