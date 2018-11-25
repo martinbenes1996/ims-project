@@ -1,7 +1,7 @@
 
 cc = g++
 flags = -std=c++17 -pedantic -Wall -Wextra -g -O0
-defines = -DDEBUG_MODE
+defines = -DOUTPUT_LOG
 linkings = -lm -lsimlib
 
 src = $(wildcard *.cpp)
@@ -15,7 +15,7 @@ all: $(output)
 # linking
 $(output) : $(obj)
 	@echo "Linking project into $@.";\
-	$(cc) $(flags) $(obj) -o $@ $(linkings)
+	$(cc) $(flags) $(defines) $(obj) -o $@ $(linkings)
   
 # compiling
 %.o : %.c

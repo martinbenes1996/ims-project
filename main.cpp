@@ -8,20 +8,30 @@
 
 typedef std::function<void(double)> Callback;
 
+#ifdef OUTPUT_LOG
+    //#define PIPES_LOG
+    #define SOURCE_LOG
+    //#define FLAGGER_LOG
+#endif
+
 class Source : public Event {
     public:
-        Source(double production, Callback output):
-            mproduction(production), moutput(output) {}
-        ~Source() { std::cerr << Time << ") Source: Destroy itself.\n"; }
+        Source(std::string name, double production, Callback output):
+            mname(name), mproduction(production), moutput(output) {}
         void Behavior() {
-            std::cerr << Time << ") Source: Produced " << mproduction << ".\n";
+            #ifdef SOURCE_LOG
+                std::cerr << Time << ") Source " << mname << ": Produced " << mproduction << ".\n";
+            #endif
             moutput(mproduction);
-            std::cerr << Time << ") Source: Reactivate at " << Time+1 << ".\n";
             Activate(Time+1);
         }
     private:
+        std::string mname;
         double mproduction;
         Callback moutput;
+        
+        long id;
+        long& getCnt() { static long i = 1; return i; }
 };
 
 class Flagger {
@@ -39,7 +49,8 @@ class Flagger {
 
 class InputLimiter {
     public:
-        InputLimiter(double maximum): mmaximum(maximum) {}
+        InputLimiter(double maximum):
+            mmaximum(maximum) {}
         double output(double amount) { return (amount < mmaximum)?amount:mmaximum; }
         double rest(double amount) { return (amount < mmaximum)?0:(amount-mmaximum); }
     private:
@@ -48,12 +59,11 @@ class InputLimiter {
 
 class Pipe: public Event {
     public:
-        Pipe(double delay, double maximum, Callback output):
-            d(delay), moutput(output), il(maximum) {
+        Pipe(std::string name, double maximum, double delay, Callback output):
+            mname(name), il(maximum), d(delay), moutput(output) {
         }
-        ~Pipe() { std::cerr << Time << ") Pipe: Destroy itself.\n"; }
         void Send(double amount) {
-            std::cerr << Time << ") Pipe: Sending " << amount << ".\n";
+            std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
             if(sending.count(Time + d) == 0) Activate(Time + d);
             sending[Time + d] += amount;
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
@@ -67,19 +77,21 @@ class Pipe: public Event {
         void SetWorking() { f.Reset(); }
 
     private:
+        std::string mname;
+        InputLimiter il;
         double d;
         Callback moutput;
+
         std::map<double, double> sending;
-        InputLimiter il;
         Flagger f;
 };
 
 class Reserve {
     public:
-        Reserve(double capacity, double delay, double maximum, Callback receiveFunc):
-            il(capacity), mlevel(capacity) {
-            there = new Pipe(delay, maximum, getInput());
-            back = new Pipe(delay, maximum, receiveFunc);
+        Reserve(std::string name, double capacity, double maxTransport, double delay, Callback receiveFunc):
+            mname(name), il(capacity), mlevel(capacity) {
+            there = new Pipe(mname+"_there", maxTransport, delay, getInput());
+            back = new Pipe(mname+"_back", maxTransport, delay, receiveFunc);
         }
 
         void Send(double amount) {
@@ -88,7 +100,7 @@ class Reserve {
         Callback getInput() { return [this](double amount){ this->Received(amount); }; }
 
         void Received(double amount) {
-            std::cerr << Time << ") CTR: Received " << amount << ".\n";
+            std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
             //back->Send(<neco>); // odesle, co se nevejde
         }
 
@@ -105,9 +117,9 @@ class Reserve {
         double Level() { return mlevel; }
 
     private:
+        std::string mname;
         InputLimiter il;
         double mlevel;
-        double mdelay;
 
         Pipe *there;
         Pipe *back;
@@ -115,16 +127,15 @@ class Reserve {
 
 class OilPipeline {
     public:
-        OilPipeline(double delay, double maxProduction, double producing):
-            mdelay(delay), mmaximum(maxProduction), mproducing(producing) {
+        OilPipeline(std::string name, double maxProduction, double producing, double delay):
+            mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
             
-            p = new Pipe(mdelay, mmaximum, getOutput());
-            s = new Source(producing, p->getInput());
+            p = new Pipe(mname, mmaximum, mdelay,  getOutput());
+            s = new Source(mname, producing, p->getInput());
             s->Activate();
         }
-        ~OilPipeline() { std::cerr << Time << ") OilPipeling: Destroy itself.\n"; }
         void Foo(double amount) {
-            std::cerr << Time << ") OilPipeline: Received " << amount << "\n";
+            std::cerr << Time << ") OilPipeline " << mname << ": Received " << amount << "\n";
             moutput(amount);
         }
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
@@ -134,9 +145,11 @@ class OilPipeline {
         void Behavior() { s->Activate(Time); }
         
     private:
-        double mdelay;
+        std::string mname;
         double mmaximum;
         double mproducing;
+        double mdelay;
+        
         Callback moutput;
 
         Pipe* p;
@@ -145,9 +158,9 @@ class OilPipeline {
 
 class Rafinery: public Process {
     public:
-        Rafinery(double delay, double maxProcessing):
-            d(delay), il(maxProcessing) {}
-        ~Rafinery() { std::cerr << Time << ") Rafinery: Destroy itself.\n"; }
+        Rafinery(std::string name, double maxProcessing, double delay):
+            mname(name), il(maxProcessing), d(delay) {}
+        ~Rafinery() { std::cerr << Time << ") Rafinery " << mname << ": Destroy itself.\n"; }
         void Enter(double amount) {
             if(processing.count(Time + d) == 0) Activate(Time + d);
             processing[Time + d] += amount;
@@ -156,28 +169,38 @@ class Rafinery: public Process {
 
         void Behavior() {
             //moutput(processing.at(Time));
-            std::cerr << Time << ") Rafinery: Processed " << processing.at(Time) << "\n";
+            std::cerr << Time << ") Rafinery " << mname << ": Processed " << processing.at(Time) << "\n";
             processing.erase(Time);
         }
 
     private:
-        double d;
+        std::string mname;
         InputLimiter il;
+        double d;
+
         std::map<double, double> processing;
+};
+
+struct Products {
+	double benzin = 0;
+	double naphta = 0;
+	double asphalt = 0;
 };
 
 class Simulator: public Process {
     public:
         Simulator() {
-            Druzba = new OilPipeline(2, 200, 100);
-            IKL = new OilPipeline(2, 200, 100);
-            Kralupy = new Rafinery(5, 200);
-            Litvinov = new Rafinery(5, 200);
+            Druzba = new OilPipeline("Druzba", 24.66, 10.55, 3);
+            IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
+            Kralupy = new Rafinery("Kralupy", 9.04, 1);
+            Litvinov = new Rafinery("Litvinov", 14.79, 1);
 
             Druzba->setOutput( Kralupy->getInput() );
             IKL->setOutput( Kralupy->getInput() );
 
-            CTR = new Reserve(1293.5, 0.1, 50, [](double){ std::cerr << Time << ") Receive to the control center!\n";} );
+            CTR = new Reserve("Nelahozeves", 1293.5, 50, 0.1,
+                /* sem se zapoji ControlCenter*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
+            );
 
             Activate();
         }
@@ -190,6 +213,7 @@ class Simulator: public Process {
                 Wait(1);
             } while(true);
         }
+
     private:
         OilPipeline* Druzba;
         OilPipeline* IKL;
@@ -205,4 +229,3 @@ int main() {
     Run();
     return 0;
 }
-
