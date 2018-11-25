@@ -125,6 +125,12 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
+struct Products {
+	double benzin = 0;
+	double naphta = 0;
+	double asphalt = 0;
+};
+
 class Simulator: public Event {
     public:
         Simulator() {
