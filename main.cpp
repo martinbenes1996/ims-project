@@ -104,7 +104,7 @@ class Pipe {
         }
         void Send(double amount) {
             PlanSending(amount, Time);
-               
+
             if(sending.count(Time + d) != 0) {
                 #ifdef PIPES_LOG
                     std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
@@ -200,6 +200,8 @@ class OilPipeline {
         }
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
+        bool IsBroken() { return broken; }   // returns true if the refinery is broken
+
         void setOutput(Callback output)
         {
             moutput = output;
@@ -211,6 +213,7 @@ class OilPipeline {
         double mmaximum;
         double mproducing;
         double mdelay;
+        bool broken = false;
 
         Callback moutput;
 
@@ -257,6 +260,8 @@ class Rafinery: public Event {
             processing.erase(Time);
         }
 
+        bool IsBroken() { return broken; }
+
         void output(Products p) {
             #ifdef RAFINERY_LOG
                 std::cerr << Time << ") Rafinery " << mname << ": Processed ["<<"b:"<<p.benzin<<", "
@@ -274,6 +279,7 @@ class Rafinery: public Event {
         std::string mname;
         InputLimiter il;
         double d;
+        bool broken = false;
 
         double maxStorage = 100;
         std::map<double, double> processing;
@@ -296,7 +302,7 @@ class Rafinery: public Event {
 
 struct CentInputRatio{
     double IKL = 0.484863281;
-    double Druzhba = 0.515136718;
+    double Druzba = 0.515136718;
 };
 struct CentOutputRatio{
     double Kralupy = 0.379353755;
@@ -305,13 +311,44 @@ struct CentOutputRatio{
 
 class Central {
     public:
-        Central(Rafinery *kr, Rafinery *lit, Pipe* Cent_Litvinov_Pipe):
-            Kralupy(kr), Litvinov(lit), LitPipe(Cent_Litvinov_Pipe)
+        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe):
+            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe)
             {
                 koutput = Kralupy->getInput();
                 loutput = LitPipe->getInput();
             }
         void Enter(double amount) {
+            // check for disasters
+            if(!Druzba->IsBroken() && !IKL->IsBroken())             // if everything is normal (99% of all checks)
+            {}
+            else if(Druzba->IsBroken() && IKL->IsBroken()) {
+                input.Druzba = 0;
+                input.IKL = 0;
+            }
+            else if(Druzba->IsBroken()) {
+                input.Druzba = 0;
+                input.IKL = 1;
+            }
+            else {
+                input.Druzba = 1;
+                input.IKL = 0;
+            }
+
+            if(!Kralupy->IsBroken() && !Litvinov->IsBroken())       // if everything is normal (99% of all checks)
+            {}
+            else if(Kralupy->IsBroken() && Litvinov->IsBroken()) {
+                output.Kralupy = 0;
+                output.Litvinov = 0;
+            }
+            else if(Kralupy->IsBroken()) {
+                output.Kralupy = 0;
+                output.Litvinov = 1;
+            }
+            else {
+                output.Kralupy = 1;
+                output.Litvinov = 0;
+            }
+
             #ifdef DISTRIBUTE_LOG
                 std::cerr << ")\t\t" << "Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
             #endif
@@ -331,6 +368,8 @@ class Central {
         Callback loutput;                   // output of central - input function of Litvinov
         Rafinery *Kralupy;
         Rafinery *Litvinov;
+        OilPipeline* Druzba;
+        OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
 };
 
@@ -355,7 +394,7 @@ class Simulator: public Process {
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
             );
 
-            CentralaKralupy = new Central(Kralupy, Litvinov, Cent_Litvinov_Pipe);
+            CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe);
             Callback CentralInputFromDruzba = [this](double amount) {
                 #ifdef CENTRAL_LOG
                     std::cerr << Time << ") Central: Received " << amount << " from Druzba.\n";
