@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <functional>
@@ -493,7 +494,9 @@ class Simulator: public Process {
             char * s = strdup(str.c_str());
             char * c = strtok(s, " \t");
             while(c != NULL) {
-                v.push_back( std::string(c) );
+                std::string r = std::string(c);
+                std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+                v.push_back(r);
                 c = strtok(NULL, " \t");
             }
             free(s);
@@ -530,23 +533,21 @@ class Simulator: public Process {
                     // change request
                     } else if(split[0] == "demand"
                            || split[0] == "d") {
+                        invalid = true;
                         if(split.size() <= 1) { // print all request values
                             std::cout << "Current demand:\n";
                             std::cout << "- benzin: " << demand.benzin << "\n";
                             std::cout << "- naphta: " << demand.naphta << "\n";
                             std::cout << "- asphalt: " << demand.asphalt << "\n";
-                            newinput = true;
                         // benzin    
                         } else if(split[1] == "benzin" 
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
                                 std::cout << "Benzin demand: " << demand.benzin << "\n";
-                                newinput = true;
                             } else if(split.size() == 3) {  // set benzin request value
                                 double val = std::stod(split[2]);
                                 std::cerr << "New benzin value is " << val << "\n";
-                                newinput = true;
                             } else {                        // error
                                 std::cerr << "Invalid input.\n";
                                 invalid = true;
@@ -558,11 +559,9 @@ class Simulator: public Process {
                             if(split.size() == 2) {         // print naphta request value
                                 std::cerr << "Maphta demand:\n";
                                 std::cout << "Naphta demand: " << demand.naphta << "\n";
-                                newinput = true;
                             } else if(split.size() == 3) {  // set naphta request value
                                 double val = std::stod(split[2]);
                                 std::cerr << "New naphta value is " << val << "\n";
-                                newinput = true;
                             } else {                        // error
                                 std::cerr << "Invalid input.\n";
                                 invalid = true;
@@ -572,14 +571,12 @@ class Simulator: public Process {
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
                                 std::cout << "Asphalt demand: " << demand.asphalt << "\n";
-                                newinput = true;
                             } else if(split.size() == 3) {  // set asphalt request value
                                 double val = std::stod(split[2]);
                                 std::cerr << "New asphalt value is " << val << "\n";
-                                newinput = true;
                             } else {                        // error
                                 std::cerr << "Invalid input.\n";
-                                invalid = true;
+                                
                             }
                         
                         // error
@@ -588,6 +585,33 @@ class Simulator: public Process {
                             invalid = true;
                         }
                     
+                    // break
+                    } else if(split[0] == "break" || split[0] == "b" || split[0] == "fix" || split[0] == "f") {
+                        bool fix = (split[0] == "fix" || split[0] == "f");
+                        newinput = true;
+                        if(split.size() == 2) {
+                            if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
+                                if(fix) std::cerr << "Fix ";
+                                else std::cerr << "Break ";
+                                std::cerr << "Druzba.\n";
+                            } else if(split[1] == "ikl" || split[1] == "i") {
+                                if(fix) std::cerr << "Fix ";
+                                else std::cerr << "Break ";
+                                std::cerr << "IKL.\n";
+                            } else if(split[1] == "kralupy" || split[1] == "k") {
+                                if(fix) std::cerr << "Fix ";
+                                else std::cerr << "Break ";
+                                std::cerr << "Kralupy.\n";
+                            } else if(split[1] == "litvinov" || split[1] == "l") {
+                                if(fix) std::cerr << "Fix ";
+                                else std::cerr << "Break ";
+                                std::cerr << "Litvinov.\n";
+                            } else {
+                                std::cerr << "Invalid input.\n";
+                                invalid = true;
+                            }
+                        }
+
                     // exit
                     } else if(split[0] == "quit" || split[0] == "exit" || split[0] == "q") {
                         exit(0);
