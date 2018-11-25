@@ -24,7 +24,7 @@ Comodity might be one of following three
 - *asphalt*: asphalt / asfalt / a
 
 Number, as a third parameter, is set as new value for demand
-of the chosen comodity, for example *demand benzin 5*.
+of the chosen comodity, for example (>> *demand benzin 5*).
 
 
 
