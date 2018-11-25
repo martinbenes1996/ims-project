@@ -308,6 +308,11 @@ struct CentOutputRatio{
     double Kralupy = 0.379353755;
     double Litvinov = 0.620646244;
 };
+struct Demand{
+    double benzin = 0;
+    double naphta = 0;
+    double asphalt = 0;
+};
 
 class Central {
     public:
@@ -349,16 +354,17 @@ class Central {
                 output.Litvinov = 0;
             }
 
+            // demand correction
+
+
             // reserve interactions
             double missing = CTR->Missing();
-            missing = 5.0;
             if(missing) {
                 #ifdef DISTRIBUTE_LOG
                     std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
                 #endif
                 CTR->getInput()((missing<=amount)?missing:amount);
                 amount = (missing<amount)?amount-missing:0.0;
-                std::cout << amount << "\n";
             }
 
             #ifdef DISTRIBUTE_LOG
@@ -372,6 +378,8 @@ class Central {
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
+        void setDemand(struct Demand* d) { demand = d; }
+
         void Behavior() {}
     private:
         struct CentInputRatio input;        // current ratio of input - negotiate with OilPipelines
@@ -384,6 +392,7 @@ class Central {
         OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
         Reserve* CTR;
+        struct Demand* demand = NULL;
 };
 
 class Simulator: public Process {
@@ -448,13 +457,13 @@ class Simulator: public Process {
                 #endif
                 //CTR->Send(1);
                 //CTR->Request(1);
-                
+
                 std::string line;
                 do {
                     std::cout << ">> " << std::flush;
                     getline(std::cin, line);
                 } while(line.size() == 0);
-                
+
                 std::vector<std::string> split = SplitString(line);
                 if(split.size() == 0) {
                 } if(split[0] == "day" || split[0] == "d") {
@@ -471,7 +480,7 @@ class Simulator: public Process {
                         // error
                     }
                 } else {
-                    
+
                 }
                 Wait(1);
             } while(true);
@@ -487,6 +496,7 @@ class Simulator: public Process {
 
         Products mproducts;
         Pipe* Cent_Litvinov_Pipe;
+        struct Demand demand;
 };
 
 int main() {
