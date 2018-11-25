@@ -10,8 +10,13 @@ typedef std::function<void(double)> Callback;
 
 #ifdef OUTPUT_LOG
     //#define PIPES_LOG
-    #define SOURCE_LOG
+    //#define SOURCE_LOG
     //#define FLAGGER_LOG
+    //#define SIMULATOR_LOG
+    //#define RAFINERY_LOG
+    //#define PIPELINE_LOG
+    //#define DISTRIBUTE_LOG
+    #define CENTRAL_LOG
 #endif
 
 class Source : public Event {
@@ -63,7 +68,6 @@ class Transfer: public Event {
             mamount(amount), moutput(output) {}
 
         void Behavior() {
-            std::cerr << "Behavior of " << this << "\n";
             moutput(mamount);
         }
 
@@ -77,26 +81,18 @@ class Pipe {
             mname(name), il(maximum), d(delay), moutput(output) {
         }
         void Send(double amount) {
-            std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
-
-            
-            //std::cerr << Time << ") Pipe " << mname << ": for time " << Time+d;
-            //if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
-            //else std::cerr << " planned " << sending.at(Time+d) << ".\n";
+            #ifdef PIPES_LOG
+                std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
+            #endif
 
             if(sending.count(Time + d) == 0) {
-                //std::cerr << Time << ") Pipe " << mname << ": Reactivate at " << Time + d << ".\n";
                 (new Transfer(sending[Time], moutput))->Activate(Time + d);
             }
             sending[Time + d] += amount;
-
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
-        void setOutput(Callback output) {
-            std::cerr << mname << ": Set output (inside) to " << this << ".\n";
-            moutput = output;
-        }
+        void setOutput(Callback output) { moutput = output; }
 
         void SetBroken() { f.Set(); }
         void SetWorking() { f.Reset(); }
@@ -162,15 +158,17 @@ class OilPipeline {
             s->Activate();
         }
         void Foo(double amount) {
-            std::cerr << Time << ") OilPipeline " << mname << ": Received " << amount << "\n";
+            #ifdef PIPELINE_LOG
+                std::cerr << Time << ") OilPipeline " << mname << ": Received " << amount << "\n";
+            #endif
             moutput(amount);
         }
-        Callback getOutput() { return [this](double amount){ std::cerr << "Here!\n"; this->Foo(amount); }; }
+        Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
         void setOutput(Callback output)
         {
-            //moutput = output;
-            p->setOutput(output);
+            moutput = output;
+            //p->setOutput(output);
         }
 
     private:
@@ -189,7 +187,6 @@ class Rafinery: public Event {
     public:
         Rafinery(std::string name, double maxProcessing, double delay):
             mname(name), il(maxProcessing), d(delay) {}
-        ~Rafinery() { std::cerr << Time << ") Rafinery " << mname << ": Destroy itself.\n"; }
         void Enter(double amount) {
             if(processing.count(Time + d) == 0) Activate(Time + d);
             processing[Time + d] += amount;
@@ -198,7 +195,9 @@ class Rafinery: public Event {
 
         void Behavior() {
             //moutput(processing.at(Time));
-            std::cerr << Time << ") Rafinery " << mname << ": Processed " << processing.at(Time) << "\n";
+            #ifdef RAFINERY_LOG
+                std::cerr << Time << ") Rafinery " << mname << ": Processed " << processing.at(Time) << "\n";
+            #endif
             processing.erase(Time);
         }
 
@@ -215,12 +214,18 @@ class Central {
         Central(Rafinery *kr, Rafinery *lit):
             Kralupy(kr), Litvinov(lit) {}
         void Enter(double amount) {
-            std::cerr << Time << ") Central: Received " << amount << "\n";
+            #ifdef CENTRAL_LOG
+                std::cerr << Time << ") Central: Received " << amount << "\n";
+            #endif
             koutput = Kralupy->getInput();
             loutput = Litvinov->getInput();
-            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Kralupy\n";
+            #ifdef DISTRIBUTE_LOG
+                std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Kralupy\n";
+            #endif
             koutput(amount/2.0);
-            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Litvinov\n";
+            #ifdef DISTRIBUTE_LOG
+                std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Litvinov\n";
+            #endif
             loutput(amount/2.0);
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
@@ -255,7 +260,6 @@ class Simulator: public Process {
             );
 
             CentralaKralupy = new Central(Kralupy, Litvinov);
-            std::cerr << "Set output (outside) to " << Druzba << "\n";
             Druzba->setOutput( CentralaKralupy->getInput() );
             IKL->setOutput( CentralaKralupy->getInput() );
             
@@ -265,7 +269,9 @@ class Simulator: public Process {
 
         void Behavior() {
             do {
+                #ifdef SIMULATOR_LOG
                 std::cerr << "Simulator step.\n";
+                #endif
                 //CTR->Send(1);
                 //CTR->Request(1);
                 Wait(1);
@@ -283,7 +289,7 @@ class Simulator: public Process {
 
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
-    Init(0,100);
+    Init(0,10);
     new Simulator();
     Run();
     return 0;
