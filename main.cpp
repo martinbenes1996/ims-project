@@ -156,6 +156,7 @@ int main() {
     OilPipeline *druzba = new OilPipeline(2, 200, 100);
     Rafinery *kralupy = new Rafinery(5, 200);
     druzba->setOutput( kralupy->getInput() );
+    new Simulator;
     Run();
     return 0;
 }
