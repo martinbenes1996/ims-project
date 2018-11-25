@@ -65,6 +65,7 @@ class Pipe: public Event {
         void Send(double amount) {
             std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
 
+            /*
             std::cerr << Time << ") Pipe " << mname << ": for time " << Time+d;
             if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
             else std::cerr << " planned " << sending.at(Time+d) << ".\n";
@@ -74,13 +75,16 @@ class Pipe: public Event {
                 Activate(Time + d);
             }
             sending[Time + d] += amount;
+            */
+
+            sending[Time + d] = amount;
+            Activate(Time + d);
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
         void setOutput(Callback output) {
-            std::cerr << mname << ": Set output!\n";
+            std::cerr << mname << ": Set output (inside) to " << this << ".\n";
             moutput = output;
-            moutput(1);
         }
 
         void Behavior() {
@@ -243,9 +247,10 @@ class Simulator: public Process {
             );
 
             CentralaKralupy = new Central(Kralupy, Litvinov);
+            std::cerr << "Set output (outside) to " << Druzba << "\n";
             Druzba->setOutput( CentralaKralupy->getInput() );
             IKL->setOutput( CentralaKralupy->getInput() );
-            std::cerr << "Set output to " << (void *)Druzba << "\n";
+            
 
             Activate();
         }
