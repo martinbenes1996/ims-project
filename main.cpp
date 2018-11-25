@@ -29,7 +29,7 @@ class Source : public Event {
         std::string mname;
         double mproduction;
         Callback moutput;
-        
+
         long id;
         long& getCnt() { static long i = 1; return i; }
 };
@@ -59,17 +59,32 @@ class InputLimiter {
 
 class Pipe: public Event {
     public:
-        Pipe(std::string name, double maximum, double delay, Callback output):
+        Pipe(std::string name, double maximum, double delay, Callback output=[](double){ std::cerr << "Output not set!\n"; }):
             mname(name), il(maximum), d(delay), moutput(output) {
         }
         void Send(double amount) {
             std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
-            if(sending.count(Time + d) == 0) Activate(Time + d);
+
+            std::cerr << Time << ") Pipe " << mname << ": for time " << Time+d;
+            if(sending.count(Time+d) == 0) std::cerr << " not planned any receiving.\n";
+            else std::cerr << " planned " << sending.at(Time+d) << ".\n";
+
+            if(sending.count(Time + d) == 0) {
+                std::cerr << Time << ") Pipe " << mname << ": Reactivate at " << Time + d << ".\n";
+                Activate(Time + d);
+            }
             sending[Time + d] += amount;
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
+        void setOutput(Callback output) {
+            std::cerr << mname << ": Set output!\n";
+            moutput = output;
+            moutput(1);
+        }
+
         void Behavior() {
+            std::cerr << "Behavior of " << this << "\n";
             moutput(sending[Time]);
             sending.erase(Time);
         }
@@ -138,25 +153,27 @@ class OilPipeline {
             std::cerr << Time << ") OilPipeline " << mname << ": Received " << amount << "\n";
             moutput(amount);
         }
-        Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
+        Callback getOutput() { return [this](double amount){ std::cerr << "Here!\n"; this->Foo(amount); }; }
 
-        void setOutput(Callback output) { moutput = output; }
+        void setOutput(Callback output)
+        {
+            //moutput = output;
+            p->setOutput(output);
+        }
 
-        void Behavior() { s->Activate(Time); }
-        
     private:
         std::string mname;
         double mmaximum;
         double mproducing;
         double mdelay;
-        
+
         Callback moutput;
 
         Pipe* p;
         Source* s;
 };
 
-class Rafinery: public Process {
+class Rafinery: public Event {
     public:
         Rafinery(std::string name, double maxProcessing, double delay):
             mname(name), il(maxProcessing), d(delay) {}
@@ -181,7 +198,7 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
-class Central{
+class Central {
     public:
         Central(Rafinery *kr, Rafinery *lit):
             Kralupy(kr), Litvinov(lit) {}
@@ -195,6 +212,8 @@ class Central{
             loutput(amount/2.0);
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
+
+        void Behavior() {}
     private:
         Callback koutput;
         Callback loutput;
@@ -216,8 +235,8 @@ class Simulator: public Process {
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
             Litvinov = new Rafinery("Litvinov", 14.79, 1);
 
-            Druzba->setOutput( Kralupy->getInput() );
-            IKL->setOutput( Kralupy->getInput() );
+            //Druzba->setOutput( Kralupy->getInput() );
+            //IKL->setOutput( Kralupy->getInput() );
 
             CTR = new Reserve("Nelahozeves", 1293.5, 50, 0.1,
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
@@ -225,6 +244,8 @@ class Simulator: public Process {
 
             CentralaKralupy = new Central(Kralupy, Litvinov);
             Druzba->setOutput( CentralaKralupy->getInput() );
+            IKL->setOutput( CentralaKralupy->getInput() );
+            std::cerr << "Set output to " << (void *)Druzba << "\n";
 
             Activate();
         }
@@ -233,7 +254,7 @@ class Simulator: public Process {
             do {
                 std::cerr << "Simulator step.\n";
                 //CTR->Send(1);
-                CTR->Request(1);
+                //CTR->Request(1);
                 Wait(1);
             } while(true);
         }
@@ -249,7 +270,7 @@ class Simulator: public Process {
 
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
-    Init(0,1000);
+    Init(0,100);
     new Simulator();
     Run();
     return 0;
