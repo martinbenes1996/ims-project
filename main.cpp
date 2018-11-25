@@ -309,8 +309,8 @@ struct CentOutputRatio{
 
 class Central {
     public:
-        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe):
-            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe)
+        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr):
+            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr)
             {
                 koutput = Kralupy->getInput();
                 loutput = LitPipe->getInput();
@@ -347,6 +347,18 @@ class Central {
                 output.Litvinov = 0;
             }
 
+            // reserve interactions
+            double missing = CTR->Missing();
+            missing = 5.0;
+            if(missing) {
+                #ifdef DISTRIBUTE_LOG
+                    std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
+                #endif
+                CTR->getInput()((missing<=amount)?missing:amount);
+                amount = (missing<amount)?amount-missing:0.0;
+                std::cout << amount << "\n";
+            }
+
             #ifdef DISTRIBUTE_LOG
                 std::cerr << ")\t\t" << "Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
             #endif
@@ -369,6 +381,7 @@ class Central {
         OilPipeline* Druzba;
         OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
+        Reserve* CTR;
 };
 
 class Simulator: public Process {
@@ -390,7 +403,7 @@ class Simulator: public Process {
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
             );
 
-            CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe);
+            CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR);
             Callback CentralInputFromDruzba = [this](double amount) {
                 #ifdef CENTRAL_LOG
                     std::cerr << Time << ") Central: Received " << amount << " from Druzba.\n";
