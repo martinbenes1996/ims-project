@@ -301,14 +301,19 @@ class Rafinery: public Event {
         }
         Productor mproductor;
 };
+// constants from documentation
+const double IKL_Ratio = 0.484863281;
+const double Druzba_Ratio = 0.515136718;
+const double Kralupy_Ratio = 0.379353755;
+const double Litvinov_Ratio = 0.620646244;
 
 struct CentInputRatio{
-    double IKL = 0.484863281;
-    double Druzba = 0.515136718;
+    double IKL = IKL_Ratio;
+    double Druzba = Druzba_Ratio;
 };
 struct CentOutputRatio{
-    double Kralupy = 0.379353755;
-    double Litvinov = 0.620646244;
+    double Kralupy = Kralupy_Ratio;
+    double Litvinov = Litvinov_Ratio;
 };
 struct Demand{
     double benzin = 0;
@@ -326,8 +331,10 @@ class Central {
             }
         void Enter(double amount) {
             // check for disasters
-            if(!Druzba->IsBroken() && !IKL->IsBroken())             // if everything is normal (99% of all checks)
-            {}
+            if(!Druzba->IsBroken() && !IKL->IsBroken()) {           // if everything is normal (99% of all checks)
+                input.Druzba = Druzba_Ratio;
+                input.IKL = IKL_Ratio;
+            }
             else if(Druzba->IsBroken() && IKL->IsBroken()) {
                 input.Druzba = 0;
                 input.IKL = 0;
@@ -341,8 +348,10 @@ class Central {
                 input.IKL = 0;
             }
 
-            if(!Kralupy->IsBroken() && !Litvinov->IsBroken())       // if everything is normal (99% of all checks)
-            {}
+            if(!Kralupy->IsBroken() && !Litvinov->IsBroken()) {     // if everything is normal (99% of all checks)
+                output.Kralupy = Kralupy_Ratio;
+                output.Litvinov = Litvinov_Ratio;
+            }
             else if(Kralupy->IsBroken() && Litvinov->IsBroken()) {
                 output.Kralupy = 0;
                 output.Litvinov = 0;
@@ -360,12 +369,15 @@ class Central {
             double demandOil = max_3(demand.benzin/FRACTION_BENZIN, demand.naphta/FRACTION_NAPHTA, demand.asphalt/FRACTION_ASPHALT);
             if(demandOil > amount) {
                 // ask reserve for oil
+                // CTR->Request(demandOil-amount);
+                // potrebuju se od rezervy dozvedet, kolik ropy jsem dostal
+                // + je opravdu potreba to posilat trubkou s delay 0?
             }
             else {
                 // reserve interactions
                 double missing = CTR->Missing();
-                if(missing) {
-                    double canSend = amount - demandOil;
+                double canSend = amount - demandOil;
+                if(missing && canSend != 0.0) {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
                     #endif
@@ -373,7 +385,7 @@ class Central {
                     amount = (missing<=canSend)?amount-missing:amount-canSend;
                 }
             }
-
+            // TODO: reflektovat potrebu ropy - vyslat pozadavek na ropovody (missing,demand,amount,input)
 
 
             #ifdef DISTRIBUTE_LOG
