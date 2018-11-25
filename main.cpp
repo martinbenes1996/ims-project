@@ -181,6 +181,27 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
+class Central{
+    public:
+        Central(Rafinery *kr, Rafinery *lit):
+            Kralupy(kr), Litvinov(lit) {}
+        void Enter(double amount) {
+            std::cerr << Time << ") Central: Received " << amount << "\n";
+            koutput = Kralupy->getInput();
+            loutput = Litvinov->getInput();
+            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Kralupy\n";
+            koutput(amount/2.0);
+            std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Litvinov\n";
+            loutput(amount/2.0);
+        }
+        Callback getInput() { return [this](double amount){this->Enter(amount);}; }
+    private:
+        Callback koutput;
+        Callback loutput;
+        Rafinery *Kralupy;
+        Rafinery *Litvinov;
+};
+
 struct Products {
 	double benzin = 0;
 	double naphta = 0;
@@ -199,8 +220,11 @@ class Simulator: public Process {
             IKL->setOutput( Kralupy->getInput() );
 
             CTR = new Reserve("Nelahozeves", 1293.5, 50, 0.1,
-                /* sem se zapoji ControlCenter*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
+                /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
             );
+
+            CentralaKralupy = new Central(Kralupy, Litvinov);
+            Druzba->setOutput( CentralaKralupy->getInput() );
 
             Activate();
         }
@@ -220,6 +244,7 @@ class Simulator: public Process {
         Rafinery* Kralupy;
         Rafinery* Litvinov;
         Reserve* CTR;
+        Central* CentralaKralupy;
 };
 
 int main() {
