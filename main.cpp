@@ -13,12 +13,26 @@ typedef std::function<void(double)> Callback;
     //#define SOURCE_LOG
     //#define FLAGGER_LOG
     //#define SIMULATOR_LOG
-    //#define RAFINERY_LOG
+    #define RAFINERY_LOG
     //#define PIPELINE_LOG
     //#define DISTRIBUTE_LOG
-    #define CENTRAL_LOG
+    //#define CENTRAL_LOG
     //#define TRANSFER_LOG
 #endif
+
+struct Products {
+	double benzin = 0;
+	double naphta = 0;
+	double asphalt = 0;
+
+    Products& operator+=(const Products& other) {
+        this->benzin += other.benzin;
+        this->naphta += other.naphta;
+        this->asphalt += other.asphalt;
+        return *this;
+    }
+};
+typedef std::function<void(Products)> Productor;
 
 class Source : public Event {
     public:
@@ -57,8 +71,8 @@ class InputLimiter {
     public:
         InputLimiter(double maximum):
             mmaximum(maximum) {}
-        double output(double amount) { return (amount < mmaximum)?amount:mmaximum; }
-        double rest(double amount) { return (amount < mmaximum)?0:(amount-mmaximum); }
+        double output(double amount, double basis=0) { return (amount < (mmaximum-basis))?amount:(mmaximum-basis); }
+        double rest(double amount, double basis=0) { return (amount < (mmaximum-basis))?0:(amount-mmaximum+basis); }
     private:
         double mmaximum;
 };
@@ -75,9 +89,11 @@ class Transfer: public Event {
             moutput(mamount);
         }
 
+
     private:
         double mamount;
         Callback moutput;
+
 };
 class Pipe {
     public:
@@ -85,15 +101,15 @@ class Pipe {
             mname(name), il(maximum), d(delay), moutput(output) {
         }
         void Send(double amount) {
-            #ifdef PIPES_LOG
-                std::cerr << Time << ") Pipe " << mname << ": Sending " << amount << ".\n";
-            #endif
-
-            if(sending.count(Time + d) == 0) {
-                (new Transfer(amount, moutput))->Activate(Time + d);
+            PlanSending(amount, Time);
+               
+            if(sending.count(Time + d) != 0) {
+                #ifdef PIPES_LOG
+                    std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
+                #endif
+                (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
             }
-            sending[Time + d] += amount;
-            // udelat rozpocitavac na jednotlive casy (Input Limiter)
+            sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
         void setOutput(Callback output) { moutput = output; }
@@ -107,9 +123,22 @@ class Pipe {
         double d;
         Callback moutput;
 
-        int i=0;
-
+        double maxStorage = 100;
         std::map<double, double> sending;
+        void PlanSending(double amount, double t) {
+            if(amount == 0) return;
+            double sum;
+            // sum all in <time, time+d>
+            sum = 0;
+            for(int i = t; i <= (t+d); i++) {
+                if(sending.count(i)) sum += sending[i];
+            }
+            if((sum+amount) > maxStorage) {
+                amount = maxStorage - sum;
+            }
+            sending[t+d] += il.output(amount, sum);
+            PlanSending(il.rest(amount, sum), t+1);
+        }
         Flagger f;
 };
 
@@ -187,13 +216,34 @@ class OilPipeline {
         Source* s;
 };
 
+class FractionalDestillation: public Event {
+    public:
+        FractionalDestillation(double amount, Productor output):
+            mamount(amount), moutput(output) {}
+        void Behavior() {
+            Products p;
+            p.benzin = 0.19*mamount;
+            p.naphta = 0.42*mamount;
+            p.asphalt = 0.13*mamount;
+            moutput(p);
+        }
+    private:
+        double mamount;
+        Productor moutput;
+};
 class Rafinery: public Event {
     public:
         Rafinery(std::string name, double maxProcessing, double delay):
             mname(name), il(maxProcessing), d(delay) {}
         void Enter(double amount) {
-            if(processing.count(Time + d) == 0) Activate(Time + d);
-            processing[Time + d] += amount;
+            PlanProcessing(amount, Time);
+
+            if(processing.count(Time) > 0) {
+                #ifdef RAFINERY_LOG
+                    std::cerr << Time << ") Rafinery " << mname << ": Process " << amount << ".\n";
+                #endif
+                (new FractionalDestillation(processing[Time], getOutput()))->Activate(Time+d);
+            }
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
@@ -205,12 +255,41 @@ class Rafinery: public Event {
             processing.erase(Time);
         }
 
+        void output(Products p) {
+            #ifdef RAFINERY_LOG
+                std::cerr << Time << ") Rafinery " << mname << ": Processed ["<<"benzin:"<<p.benzin<<","
+                                                                              <<"naphta:"<<p.naphta<<","
+                                                                              <<"asphalt:"<<p.asphalt<<"].\n";
+            #endif
+            mproductor(p);
+        }
+        Productor getOutput() { return [this](Products p){this->output(p);}; }
+        void setProductor(Productor p) {
+            mproductor = p;
+        }
+
     private:
         std::string mname;
         InputLimiter il;
         double d;
 
+        double maxStorage = 100;
         std::map<double, double> processing;
+        void PlanProcessing(double amount, double t) {
+            if(amount == 0) return;
+            double sum;
+            // sum all in <time, time+d>
+            sum = 0;
+            for(int i = t; i <= (t+d); i++) {
+                if(processing.count(i)) sum += processing[i];
+            }
+            if((sum+amount) > maxStorage) {
+                amount = maxStorage - sum;
+            }
+            processing[t+d] += il.output(amount, sum);
+            PlanProcessing(il.rest(amount, sum), t+1);
+        }
+        Productor mproductor;
 };
 
 class Central {
@@ -239,12 +318,6 @@ class Central {
         Rafinery *Litvinov;
 };
 
-struct Products {
-	double benzin = 0;
-	double naphta = 0;
-	double asphalt = 0;
-};
-
 class Simulator: public Process {
     public:
         Simulator() {
@@ -252,6 +325,9 @@ class Simulator: public Process {
             IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
             Litvinov = new Rafinery("Litvinov", 14.79, 1);
+
+            Kralupy->setProductor( getProductor() );
+            Litvinov->setProductor( getProductor() );
 
             //Druzba->setOutput( Kralupy->getInput() );
             //IKL->setOutput( Kralupy->getInput() );
@@ -276,9 +352,13 @@ class Simulator: public Process {
             Druzba->setOutput( CentralInputFromDruzba );
             IKL->setOutput( CentralInputFromIKL );
             
-
             Activate();
         }
+
+        void AcquireProducts(Products p) {
+            mproducts += p;
+        }
+        Productor getProductor() { return [this](Products p){ this->AcquireProducts(p); }; }
 
         void Behavior() {
             do {
@@ -298,11 +378,13 @@ class Simulator: public Process {
         Rafinery* Litvinov;
         Reserve* CTR;
         Central* CentralaKralupy;
+
+        Products mproducts;
 };
 
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
-    Init(0,10);
+    Init(0,20);
     new Simulator();
     Run();
     return 0;
