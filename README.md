@@ -19,7 +19,7 @@ with following commands
 
 Examples:
 
-- demand/d*shows current demand*
+- demand/d *shows current demand*
 - demand/d benzin/b *shows current demand for benzin*
 - demand/d naphta/nafta/diesel/n/d *shows current demand for diesel*
 - demand/d asphalt/asfalt/a *shows current demand for asfalt*
