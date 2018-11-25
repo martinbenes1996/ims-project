@@ -102,7 +102,7 @@ class Pipe {
         }
         void Send(double amount) {
             PlanSending(amount, Time);
-               
+
             if(sending.count(Time + d) != 0) {
                 #ifdef PIPES_LOG
                     std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
@@ -258,6 +258,8 @@ class Rafinery: public Event {
             processing.erase(Time);
         }
 
+        bool IsBroken() { return broken; }
+
         void output(Products p) {
             #ifdef RAFINERY_LOG
                 std::cerr << Time << ") Rafinery " << mname << ": Processed ["<<"benzin:"<<p.benzin<<","
@@ -369,12 +371,6 @@ class Central {
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
 };
 
-struct Products {
-	double benzin = 0;
-	double naphta = 0;
-	double asphalt = 0;
-};
-
 class Simulator: public Process {
     public:
         Simulator() {
@@ -409,7 +405,7 @@ class Simulator: public Process {
             };
             Druzba->setOutput( CentralInputFromDruzba );
             IKL->setOutput( CentralInputFromIKL );
-            
+
             Activate();
         }
 
