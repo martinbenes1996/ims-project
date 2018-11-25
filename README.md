@@ -15,7 +15,10 @@ The whole model is controlled via console. User can manage it
 with following commands
 
 - next/n *computes another day*
-- demand/d *shows current demand*
+- demand/d [comodity [<number>]] *manages demand*
+
+Examples:
+- demand/d*shows current demand*
 - demand/d benzin/b *shows current demand for benzin*
 - demand/d naphta/nafta/diesel/n/d *shows current demand for diesel*
 - demand/d asphalt/asfalt/a *shows current demand for asfalt*
