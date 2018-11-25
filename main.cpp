@@ -220,9 +220,7 @@ class OilPipeline {
         Pipe* p;
         Source* s;
 };
-#define FRACTION_BENZIN 0.19
-#define FRACTION_NAPHTA 0.42
-#define FRACTION_ASPHALT 0.13
+
 class FractionalDestillation: public Event {
     public:
         FractionalDestillation(double amount, Productor output):
@@ -307,6 +305,10 @@ const double Druzba_Ratio = 0.515136718;
 const double Kralupy_Ratio = 0.379353755;
 const double Litvinov_Ratio = 0.620646244;
 
+const double Fraction_Benzin = 0.19;
+const double Fraction_Naphta = 0.42;
+const double Fraction_Asphalt = 0.13;
+
 struct CentInputRatio{
     double IKL = IKL_Ratio;
     double Druzba = Druzba_Ratio;
@@ -366,7 +368,7 @@ class Central {
             }
 
             // demand correction - DEMAND FIRST, RESERVE SECOND
-            double demandOil = max_3(demand.benzin/FRACTION_BENZIN, demand.naphta/FRACTION_NAPHTA, demand.asphalt/FRACTION_ASPHALT);
+            double demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
             if(demandOil > amount) {
                 // ask reserve for oil
                 // CTR->Request(demandOil-amount);
