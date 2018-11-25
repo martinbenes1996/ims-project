@@ -17,6 +17,7 @@ typedef std::function<void(double)> Callback;
     //#define PIPELINE_LOG
     //#define DISTRIBUTE_LOG
     #define CENTRAL_LOG
+    //#define TRANSFER_LOG
 #endif
 
 class Source : public Event {
@@ -68,6 +69,9 @@ class Transfer: public Event {
             mamount(amount), moutput(output) {}
 
         void Behavior() {
+            #ifdef TRANSFER_LOG
+                std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
+            #endif
             moutput(mamount);
         }
 
@@ -86,7 +90,7 @@ class Pipe {
             #endif
 
             if(sending.count(Time + d) == 0) {
-                (new Transfer(sending[Time], moutput))->Activate(Time + d);
+                (new Transfer(amount, moutput))->Activate(Time + d);
             }
             sending[Time + d] += amount;
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
