@@ -9,15 +9,15 @@
 typedef std::function<void(double)> Callback;
 
 #ifdef OUTPUT_LOG
-    //#define PIPES_LOG
+    #define PIPES_LOG
     //#define SOURCE_LOG
     //#define FLAGGER_LOG
     //#define SIMULATOR_LOG
     //#define RAFINERY_LOG
     //#define PIPELINE_LOG
-    //#define DISTRIBUTE_LOG
+    #define DISTRIBUTE_LOG
     #define CENTRAL_LOG
-    //#define TRANSFER_LOG
+    #define TRANSFER_LOG
 #endif
 
 class Source : public Event {
@@ -213,30 +213,44 @@ class Rafinery: public Event {
         std::map<double, double> processing;
 };
 
+struct CentInputRatio{
+    double IKL = 0.484863281;
+    double Druzhba = 0.515136718;
+};
+struct CentOutputRatio{
+    double Kralupy = 0.379353755;
+    double Litvinov = 0.620646244;
+};
+
 class Central {
     public:
-        Central(Rafinery *kr, Rafinery *lit):
-            Kralupy(kr), Litvinov(lit) {}
+        Central(Rafinery *kr, Rafinery *lit, Pipe* Cent_Litvinov_Pipe):
+            Kralupy(kr), Litvinov(lit), LitPipe(Cent_Litvinov_Pipe)
+            {
+                koutput = Kralupy->getInput();
+                loutput = LitPipe->getInput();
+            }
         void Enter(double amount) {
-            koutput = Kralupy->getInput();
-            loutput = Litvinov->getInput();
             #ifdef DISTRIBUTE_LOG
-                std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Kralupy\n";
+                std::cerr << ")\t\t" << "Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
             #endif
-            koutput(amount/2.0);
+            koutput(amount*output.Kralupy);
             #ifdef DISTRIBUTE_LOG
-                std::cerr << ")\t\t" << "Central: Sending " << amount/2.0 << "to Litvinov\n";
+                std::cerr << ")\t\t" << "Central: Sending " << amount*output.Litvinov << " to Litvinov\n";
             #endif
-            loutput(amount/2.0);
+            loutput(amount*output.Litvinov);
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
         void Behavior() {}
     private:
-        Callback koutput;
-        Callback loutput;
+        struct CentInputRatio input;        // current ratio of input - negotiate with OilPipelines
+        struct CentOutputRatio output;      // current ratio of output - negotiate with Rafinery
+        Callback koutput;                   // output of central - input function of Kralupy
+        Callback loutput;                   // output of central - input function of Litvinov
         Rafinery *Kralupy;
         Rafinery *Litvinov;
+        Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
 };
 
 struct Products {
@@ -252,15 +266,16 @@ class Simulator: public Process {
             IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
             Litvinov = new Rafinery("Litvinov", 14.79, 1);
+            Cent_Litvinov_Pipe = new Pipe("Cent->Litvinov", 10/*change*/, 1, Litvinov->getInput());
 
             //Druzba->setOutput( Kralupy->getInput() );
             //IKL->setOutput( Kralupy->getInput() );
 
-            CTR = new Reserve("Nelahozeves", 1293.5, 50, 0.1,
+            CTR = new Reserve("Nelahozeves", 1293.5, 50, 0,
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
             );
 
-            CentralaKralupy = new Central(Kralupy, Litvinov);
+            CentralaKralupy = new Central(Kralupy, Litvinov, Cent_Litvinov_Pipe);
             Callback CentralInputFromDruzba = [this](double amount) {
                 #ifdef CENTRAL_LOG
                     std::cerr << Time << ") Central: Received " << amount << " from Druzba.\n";
@@ -275,7 +290,7 @@ class Simulator: public Process {
             };
             Druzba->setOutput( CentralInputFromDruzba );
             IKL->setOutput( CentralInputFromIKL );
-            
+
 
             Activate();
         }
@@ -298,6 +313,7 @@ class Simulator: public Process {
         Rafinery* Litvinov;
         Reserve* CTR;
         Central* CentralaKralupy;
+        Pipe* Cent_Litvinov_Pipe;
 };
 
 int main() {
