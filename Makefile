@@ -1,6 +1,6 @@
 
 cc = g++
-flags = -std=c++17 -pedantic -Wall -Wextra
+flags = -std=c++17 -pedantic -Wall -Wextra -g -O0
 defines = -DDEBUG_MODE
 linkings = -lm -lsimlib
 
