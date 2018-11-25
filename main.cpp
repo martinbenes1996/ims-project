@@ -220,7 +220,9 @@ class OilPipeline {
         Pipe* p;
         Source* s;
 };
-
+#define FRACTION_BENZIN 0.19
+#define FRACTION_NAPHTA 0.42
+#define FRACTION_ASPHALT 0.13
 class FractionalDestillation: public Event {
     public:
         FractionalDestillation(double amount, Productor output):
@@ -354,18 +356,25 @@ class Central {
                 output.Litvinov = 0;
             }
 
-            // demand correction
-
-
-            // reserve interactions
-            double missing = CTR->Missing();
-            if(missing) {
-                #ifdef DISTRIBUTE_LOG
-                    std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
-                #endif
-                CTR->getInput()((missing<=amount)?missing:amount);
-                amount = (missing<amount)?amount-missing:0.0;
+            // demand correction - DEMAND FIRST, RESERVE SECOND
+            double demandOil = max_3(demand.benzin/FRACTION_BENZIN, demand.naphta/FRACTION_NAPHTA, demand.asphalt/FRACTION_ASPHALT);
+            if(demandOil > amount) {
+                // ask reserve for oil
             }
+            else {
+                // reserve interactions
+                double missing = CTR->Missing();
+                if(missing) {
+                    double canSend = amount - demandOil;
+                    #ifdef DISTRIBUTE_LOG
+                        std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
+                    #endif
+                    CTR->getInput()((missing<=canSend)?missing:canSend);
+                    amount = (missing<=canSend)?amount-missing:amount-canSend;
+                }
+            }
+
+
 
             #ifdef DISTRIBUTE_LOG
                 std::cerr << ")\t\t" << "Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
@@ -378,10 +387,14 @@ class Central {
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
-        void setDemand(struct Demand* d) { demand = d; }
+        void setDemand(struct Demand d) { demand.asphalt = d.asphalt; demand.benzin = d.benzin; demand.naphta = d.naphta; }
 
         void Behavior() {}
     private:
+        double max_3(double b, double n, double a) {
+            double maximum = (b>n)?b:n;
+            return (maximum>a)?maximum:a;
+        }
         struct CentInputRatio input;        // current ratio of input - negotiate with OilPipelines
         struct CentOutputRatio output;      // current ratio of output - negotiate with Rafinery
         Callback koutput;                   // output of central - input function of Kralupy
@@ -392,7 +405,7 @@ class Central {
         OilPipeline* IKL;
         Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
         Reserve* CTR;
-        struct Demand* demand = NULL;
+        struct Demand demand;
 };
 
 class Simulator: public Process {
