@@ -74,6 +74,45 @@ class Pipe: public Event {
         Flagger f;
 };
 
+class Reserve {
+    public:
+        Reserve(double capacity, double delay, double maximum, Callback receiveFunc):
+            il(capacity), mlevel(capacity) {
+            there = new Pipe(delay, maximum, getInput());
+            back = new Pipe(delay, maximum, receiveFunc);
+        }
+
+        void Send(double amount) {
+            there->Send(amount);
+        }
+        Callback getInput() { return [this](double amount){ this->Received(amount); }; }
+
+        void Received(double amount) {
+            std::cerr << Time << ") CTR: Received " << amount << ".\n";
+            //back->Send(<neco>); // odesle, co se nevejde
+        }
+
+        void Request(double amount) {
+            // limit by the limit of reserves
+            back->Send(amount);
+        }
+
+        double Missing() {
+            return 0;
+            // how much is missing (to full/to accomplish the EU rules?)
+        }
+
+        double Level() { return mlevel; }
+
+    private:
+        InputLimiter il;
+        double mlevel;
+        double mdelay;
+
+        Pipe *there;
+        Pipe *back;
+};
+
 class OilPipeline {
     public:
         OilPipeline(double delay, double maxProduction, double producing):
@@ -81,7 +120,7 @@ class OilPipeline {
             
             p = new Pipe(mdelay, mmaximum, getOutput());
             s = new Source(producing, p->getInput());
-            s->Activate(Time);
+            s->Activate();
         }
         ~OilPipeline() { std::cerr << Time << ") OilPipeling: Destroy itself.\n"; }
         void Foo(double amount) {
@@ -91,6 +130,8 @@ class OilPipeline {
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
         void setOutput(Callback output) { moutput = output; }
+
+        void Behavior() { s->Activate(Time); }
         
     private:
         double mdelay;
@@ -125,7 +166,7 @@ class Rafinery: public Process {
         std::map<double, double> processing;
 };
 
-class Simulator: public Event {
+class Simulator: public Process {
     public:
         Simulator() {
             Druzba = new OilPipeline(2, 200, 100);
@@ -134,22 +175,33 @@ class Simulator: public Event {
             Litvinov = new Rafinery(5, 200);
 
             Druzba->setOutput( Kralupy->getInput() );
+            IKL->setOutput( Kralupy->getInput() );
+
+            CTR = new Reserve(1293.5, 0.1, 50, [](double){ std::cerr << Time << ") Receive to the control center!\n";} );
+
+            Activate();
+        }
+
+        void Behavior() {
+            do {
+                std::cerr << "Simulator step.\n";
+                //CTR->Send(1);
+                CTR->Request(1);
+                Wait(1);
+            } while(true);
         }
     private:
         OilPipeline* Druzba;
         OilPipeline* IKL;
         Rafinery* Kralupy;
         Rafinery* Litvinov;
+        Reserve* CTR;
 };
 
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
     Init(0,1000);
-    //Ropovod("Druzhba", new Source(100), new Pipe(2,200));
-    //Rafinery("Kralupy", 9.04, [](Products){}, 0);
-    OilPipeline *druzba = new OilPipeline(2, 200, 100);
-    Rafinery *kralupy = new Rafinery(5, 200);
-    druzba->setOutput( kralupy->getInput() );
+    new Simulator();
     Run();
     return 0;
 }
