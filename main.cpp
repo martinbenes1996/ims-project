@@ -29,7 +29,7 @@ class Source : public Event {
         std::string mname;
         double mproduction;
         Callback moutput;
-        
+
         long id;
         long& getCnt() { static long i = 1; return i; }
 };
@@ -59,7 +59,7 @@ class InputLimiter {
 
 class Pipe: public Event {
     public:
-        Pipe(std::string name, double maximum, double delay, Callback output):
+        Pipe(std::string name, double maximum, double delay, Callback output=[](double){}):
             mname(name), il(maximum), d(delay), moutput(output) {
         }
         void Send(double amount) {
@@ -69,6 +69,8 @@ class Pipe: public Event {
             // udelat rozpocitavac na jednotlive casy (Input Limiter)
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
+        void setOutput(Callback output){moutput=output;}
+
         void Behavior() {
             moutput(sending[Time]);
             sending.erase(Time);
@@ -129,7 +131,7 @@ class OilPipeline {
     public:
         OilPipeline(std::string name, double maxProduction, double producing, double delay):
             mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
-            
+
             p = new Pipe(mname, mmaximum, mdelay,  getOutput());
             s = new Source(mname, producing, p->getInput());
             s->Activate();
@@ -140,16 +142,20 @@ class OilPipeline {
         }
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
-        void setOutput(Callback output) { moutput = output; }
+        void setOutput(Callback output)
+        {
+            moutput = output;
+            p->setOutput(output);
+        }
 
         void Behavior() { s->Activate(Time); }
-        
+
     private:
         std::string mname;
         double mmaximum;
         double mproducing;
         double mdelay;
-        
+
         Callback moutput;
 
         Pipe* p;
@@ -216,8 +222,8 @@ class Simulator: public Process {
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
             Litvinov = new Rafinery("Litvinov", 14.79, 1);
 
-            Druzba->setOutput( Kralupy->getInput() );
-            IKL->setOutput( Kralupy->getInput() );
+            //Druzba->setOutput( Kralupy->getInput() );
+            //IKL->setOutput( Kralupy->getInput() );
 
             CTR = new Reserve("Nelahozeves", 1293.5, 50, 0.1,
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
@@ -225,6 +231,7 @@ class Simulator: public Process {
 
             CentralaKralupy = new Central(Kralupy, Litvinov);
             Druzba->setOutput( CentralaKralupy->getInput() );
+            IKL->setOutput( CentralaKralupy->getInput() );
 
             Activate();
         }
