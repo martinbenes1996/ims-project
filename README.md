@@ -18,6 +18,7 @@ with following commands
 - demand/d [comodity [<number>]] *manages demand*
 
 Examples:
+
 - demand/d*shows current demand*
 - demand/d benzin/b *shows current demand for benzin*
 - demand/d naphta/nafta/diesel/n/d *shows current demand for diesel*
