@@ -11,15 +11,16 @@
 typedef std::function<void(double)> Callback;
 
 #ifdef OUTPUT_LOG
-    #define PIPES_LOG
     //#define SOURCE_LOG
+    #define PIPES_LOG
     //#define FLAGGER_LOG
     //#define SIMULATOR_LOG
-    #define RAFINERY_LOG
+    //#define RAFINERY_LOG
     //#define PIPELINE_LOG
-    //#define DISTRIBUTE_LOG
-    //#define CENTRAL_LOG
+    #define DISTRIBUTE_LOG
+    #define CENTRAL_LOG
     //#define TRANSFER_LOG
+    //#define RESERVE_LOG
 #endif
 
 struct Products {
@@ -158,7 +159,9 @@ class Reserve {
         Callback getInput() { return [this](double amount){ this->Received(amount); }; }
 
         void Received(double amount) {
-            std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
+            #ifdef RESERVE_LOG
+                std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
+            #endif
             //back->Send(<neco>); // odesle, co se nevejde
         }
 
@@ -202,11 +205,7 @@ class OilPipeline {
 
         bool IsBroken() { return broken; }   // returns true if the refinery is broken
 
-        void setOutput(Callback output)
-        {
-            moutput = output;
-            //p->setOutput(output);
-        }
+        void setOutput(Callback output) { moutput = output; }
 
     private:
         std::string mname;
@@ -354,19 +353,19 @@ class Central {
             missing = 5.0;
             if(missing) {
                 #ifdef DISTRIBUTE_LOG
-                    std::cerr << ")\t\t" << "Central: Sending " << (missing<=amount)?missing:amount << " to CTR\n";
+                    std::cerr << Time << ") Central: Sending " << ((missing<=amount)?missing:amount) << " to CTR\n";
                 #endif
                 CTR->getInput()((missing<=amount)?missing:amount);
                 amount = (missing<amount)?amount-missing:0.0;
-                std::cout << amount << "\n";
+                //std::cout << amount << "\n";
             }
 
             #ifdef DISTRIBUTE_LOG
-                std::cerr << ")\t\t" << "Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
+                std::cerr << Time << ") Central: Sending " << amount*output.Kralupy << " to Kralupy\n";
             #endif
             koutput(amount*output.Kralupy);
             #ifdef DISTRIBUTE_LOG
-                std::cerr << ")\t\t" << "Central: Sending " << amount*output.Litvinov << " to Litvinov\n";
+                std::cerr << Time << ") Central: Sending " << amount*output.Litvinov << " to Litvinov\n";
             #endif
             loutput(amount*output.Litvinov);
         }
@@ -389,19 +388,16 @@ class Central {
 class Simulator: public Process {
     public:
         Simulator() {
-            Activate();
+            Activate(Time);
 
             Druzba = new OilPipeline("Druzba", 24.66, 10.55, 3);
             IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
             Kralupy = new Rafinery("Kralupy", 9.04, 1);
             Litvinov = new Rafinery("Litvinov", 14.79, 1);
-            Cent_Litvinov_Pipe = new Pipe("Cent->Litvinov", 10/*change*/, 1, Litvinov->getInput());
+            Cent_Litvinov_Pipe = new Pipe("Centre_Litvinov", 10/*change*/, 1, Litvinov->getInput());
 
             Kralupy->setProductor( getProductor() );
             Litvinov->setProductor( getProductor() );
-
-            //Druzba->setOutput( Kralupy->getInput() );
-            //IKL->setOutput( Kralupy->getInput() );
 
             CTR = new Reserve("Nelahozeves", 1293.5, 50, 0,
                 /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
@@ -442,37 +438,104 @@ class Simulator: public Process {
         }
 
         void Behavior() {
+            std::string mem;
             do {
                 #ifdef SIMULATOR_LOG
                 std::cerr << "Simulator step.\n";
                 #endif
-                //CTR->Send(1);
-                //CTR->Request(1);
-                
-                std::string line;
+                bool newinput = false;
+                bool invalid = false;
                 do {
+                    newinput = false;
+                    invalid = false;
+                    std::string line;
                     std::cout << ">> " << std::flush;
                     getline(std::cin, line);
-                } while(line.size() == 0);
-                
-                std::vector<std::string> split = SplitString(line);
-                if(split.size() == 0) {
-                } if(split[0] == "day" || split[0] == "d") {
-                } else if(split[0] == "request" || split[0] == "rq") {
-                    if(split.size() <= 1) {
-                        // missing
-                    } else if(split[1] == "benzin" || split[1] == "natural" || split[1] == "b") {
-                        // split2 is benzin request value
-                    } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" || split[1] == "diesel" || split[1] == "d") {
-                        // split2 is naphta request value
-                    } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
-                        // split2 is asfalt request value
-                    } else {
+                    if(std::cin.eof()) { std::cout << "Quit\n"; exit(0); }
+                    if(mem != "" && line == "") { line = mem; }
+                    std::vector<std::string> split = SplitString(line);
+
+                    // no content
+                    if(line == "" || split.size() == 0) {
+                        newinput = true;
+
+                    // next day
+                    } else if(split[0] == "day"
+                      || split[0] == "d"
+                      || split[0] == "next"
+                      || split[0] == "n") {            
+                        std::cerr << "Next day.\n";
+
+                    // change request
+                    } else if(split[0] == "request"
+                           || split[0] == "req"
+                           || split[0] == "rq") {
+                        if(split.size() <= 1) { // print all request values
+                            std::cerr << "Request values:\n";
+                            newinput = true;
+                        // benzin    
+                        } else if(split[1] == "benzin" 
+                               || split[1] == "natural"
+                               || split[1] == "b") {
+                            if(split.size() == 2) {         // print benzin request value
+                                std::cerr << "Benzin demand:\n";
+                                newinput = true;
+                            } else if(split.size() == 3) {  // set benzin request value
+                                double val = std::stod(split[2]);
+                                std::cerr << "New benzin value is " << val << "\n";
+                                newinput = true;
+                            } else {                        // error
+                                std::cerr << "Invalid input.\n";
+                                invalid = true;
+                            }
+
+                        // naphta
+                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" 
+                               || split[1] == "diesel" || split[1] == "d") {
+                            if(split.size() == 2) {         // print naphta request value
+                                std::cerr << "Maphta demand:\n";
+                                newinput = true;
+                            } else if(split.size() == 3) {  // set naphta request value
+                                double val = std::stod(split[2]);
+                                std::cerr << "New naphta value is " << val << "\n";
+                                newinput = true;
+                            } else {                        // error
+                                std::cerr << "Invalid input.\n";
+                                invalid = true;
+                            }
+                        
+                        // asphalt
+                        } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
+                            if(split.size() == 2) {         // print asphalt request value
+                                std::cerr << "Asphalt demand:\n";
+                                newinput = true;
+                            } else if(split.size() == 3) {  // set asphalt request value
+                                double val = std::stod(split[2]);
+                                std::cerr << "New asphalt value is " << val << "\n";
+                                newinput = true;
+                            } else {                        // error
+                                std::cerr << "Invalid input.\n";
+                                invalid = true;
+                            }
+                        
                         // error
-                    }
-                } else {
+                        } else {
+                            std::cerr << "Invalid input.\n";
+                            invalid = true;
+                        }
                     
-                }
+                    // exit
+                    } else if(split[0] == "quit" || split[0] == "exit" || split[0] == "q") {
+                        exit(0);
+
+                    // unknown command
+                    } else {
+                        std::cerr << "Invalid input.\n";
+                        invalid = true;
+                    }
+                    if(!invalid) mem = line;
+                } while(newinput || invalid);
+                
                 Wait(1);
             } while(true);
         }
@@ -491,7 +554,7 @@ class Simulator: public Process {
 
 int main() {
     Print("Model Ropovod - SIMLIB/C++\n");
-    Init(0,20);
+    Init(1,100);
     new Simulator();
     Run();
     return 0;
