@@ -214,9 +214,6 @@ class Central {
         Central(Rafinery *kr, Rafinery *lit):
             Kralupy(kr), Litvinov(lit) {}
         void Enter(double amount) {
-            #ifdef CENTRAL_LOG
-                std::cerr << Time << ") Central: Received " << amount << "\n";
-            #endif
             koutput = Kralupy->getInput();
             loutput = Litvinov->getInput();
             #ifdef DISTRIBUTE_LOG
@@ -260,8 +257,20 @@ class Simulator: public Process {
             );
 
             CentralaKralupy = new Central(Kralupy, Litvinov);
-            Druzba->setOutput( CentralaKralupy->getInput() );
-            IKL->setOutput( CentralaKralupy->getInput() );
+            Callback CentralInputFromDruzba = [this](double amount) {
+                #ifdef CENTRAL_LOG
+                    std::cerr << Time << ") Central: Received " << amount << " from Druzba.\n";
+                #endif
+                this->CentralaKralupy->Enter(amount);
+            };
+            Callback CentralInputFromIKL = [this](double amount) {
+                #ifdef CENTRAL_LOG
+                    std::cerr << Time << ") Central: Received " << amount << " from IKL.\n";
+                #endif
+                this->CentralaKralupy->Enter(amount);
+            };
+            Druzba->setOutput( CentralInputFromDruzba );
+            IKL->setOutput( CentralInputFromIKL );
             
 
             Activate();
