@@ -59,10 +59,10 @@ class Source : public Process {
                 moutput(mproduction);
 
                 if(seize) Release(EventOrder.waitForConsole);
-                Wait(1);   
+                Wait(1);
             } while(true);
 
-            
+
         }
     private:
         std::string mname;
@@ -405,15 +405,21 @@ class Central {
                 output.Litvinov = 0;
             }
 
+            // central receives up to two deliveries of oil per day
+            // if it is a new day, count the demand of oil for today and init oil received today
+            double tempAmount = amount;
+            if(Time != lastTime) {
+                demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
+                oilToday = 0;
+            }
             // demand correction - DEMAND FIRST, RESERVE SECOND
-            double demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
-            if(demandOil > amount) {
+            if((Time != lastTime) && (demandOil > amount+oilToday)) {
                 // ask reserve for oil
                 // CTR->Request(demandOil-amount);
                 // potrebuju se od rezervy dozvedet, kolik ropy jsem dostal
                 // + je opravdu potreba to posilat trubkou s delay 0?
             }
-            else {
+            if(demandOil <= amount+oilToday) {
                 // reserve interactions
                 double missing = CTR->Missing();
                 double canSend = amount - demandOil;
@@ -436,6 +442,11 @@ class Central {
                 std::cerr << Time << ") Central: Sending " << amount*output.Litvinov << " to Litvinov\n";
             #endif
             loutput(amount*output.Litvinov);
+
+            if(Time != lastTime) {
+                lastTime = Time;        // updating date (after the first delivery of the day)
+            }
+            oilToday += tempAmount;     // increasing the amount of oil received today
         }
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
 
@@ -455,9 +466,13 @@ class Central {
         Rafinery *Litvinov;
         OilPipeline* Druzba;
         OilPipeline* IKL;
-        Pipe* LitPipe;                      // oil for Litvinov is sent via pipe
+        Pipe* LitPipe;                      // oil for Litvinov is sent via this pipe
         Reserve* CTR;
-        struct Demand& demand;
+        struct Demand& demand;              // current demand set by simulator
+        int lastTime = -1;                  // time of the last call of enter function
+        //bool firstDelivery = false;         // first delivery of this day was received
+        double oilToday = 0;                // oil received today so far
+        double demandOil = 0;               // demand of oil for today
 };
 
 class Simulator: public Process {
@@ -538,7 +553,7 @@ class Simulator: public Process {
 
                     // next day
                     } else if(split[0] == "next"
-                      || split[0] == "n") {            
+                      || split[0] == "n") {
                         std::cerr << "Day "<<Time<<".\n";
 
                     // change request
@@ -550,8 +565,8 @@ class Simulator: public Process {
                             std::cout << "- benzin: " << demand.benzin << "\n";
                             std::cout << "- naphta: " << demand.naphta << "\n";
                             std::cout << "- asphalt: " << demand.asphalt << "\n";
-                        // benzin    
-                        } else if(split[1] == "benzin" 
+                        // benzin
+                        } else if(split[1] == "benzin"
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
@@ -565,7 +580,7 @@ class Simulator: public Process {
                             }
 
                         // naphta
-                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" 
+                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n"
                                || split[1] == "diesel" || split[1] == "d") {
                             if(split.size() == 2) {         // print naphta request value
                                 std::cerr << "Maphta demand:\n";
@@ -577,7 +592,7 @@ class Simulator: public Process {
                                 std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
-                        
+
                         // asphalt
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
@@ -587,15 +602,15 @@ class Simulator: public Process {
                                 std::cerr << "New asphalt value is " << val << "\n";
                             } else {                        // error
                                 std::cerr << "Invalid input.\n";
-                                
+
                             }
-                        
+
                         // error
                         } else {
                             std::cerr << "Invalid input.\n";
                             invalid = true;
                         }
-                    
+
                     // break
                     } else if(split[0] == "break" || split[0] == "b" || split[0] == "fix" || split[0] == "f") {
                         bool fix = (split[0] == "fix" || split[0] == "f");
@@ -634,7 +649,7 @@ class Simulator: public Process {
                     }
                     if(!invalid) mem = line;
                 } while(newinput || invalid);
-                
+
                 EventOrder.t = Time+1;
                 Seize(EventOrder.waitForConsole);
                 Wait(1);
