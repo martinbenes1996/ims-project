@@ -145,7 +145,7 @@ class Pipe {
         void Break() { f.Set(); }
         void Fix() { f.Reset(); }
         bool IsBroken() { return f.IsSet(); }
-    
+
     protected:
         void PlanSending(double amount, double t) {
             if(amount == 0) return;
@@ -170,7 +170,7 @@ class Pipe {
 
         double maxStorage = 100;
         std::map<double, double> sending;
-        
+
         Flagger f;
 };
 
@@ -434,7 +434,7 @@ class Central {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << Time << ") Central: Sending " << ((missing<=oilToday)?missing:oilToday) << " to CTR\n";
                     #endif
-                    CTR->getInput()((missing<=canSend)?missing:canSend);
+                    CTR->Send((missing<=canSend)?missing:canSend);
                     oilToday = (missing<=canSend)?oilToday-missing:oilToday-canSend;
                 }
             }
@@ -492,9 +492,9 @@ class Simulator: public Process {
             Kralupy->setProductor( getProductor() );
             Litvinov->setProductor( getProductor() );
 
-            CTR = new Reserve("Nelahozeves", 1293.5, 50, 0,
-                /* sem se zapoji Central*/[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
-            );
+            CTR = new Reserve("Nelahozeves", 1293.5
+                /* sem se zapoji Central[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
+            */);
 
             CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR, demand);
             Callback CentralInputFromDruzba = [this](double amount) {
