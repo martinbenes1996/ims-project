@@ -184,7 +184,7 @@ class Reserve {
             #ifdef RESERVE_LOG
                 std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
             #endif
-            mlevel += il.output(amount);
+            mlevel -= il.output(amount);
             return il.rest(amount);
         }
 
@@ -203,8 +203,8 @@ class Reserve {
         double Level() { return mlevel; }
 
         double Missing() {
-            int miss = mlevel - 900;
-            if(miss < 0) miss = 0;
+            double miss = mlevel - 900.0;
+            if(miss < 0.0) miss = 0.0;
             return miss;
         }
 
@@ -422,24 +422,28 @@ class Central {
             // demand correction - DEMAND FIRST, RESERVE SECOND
             if(demandOil > oilToday) {
                 // ask reserve for oil
-                // CTR->Request(demandOil-oilToday);
-                // potrebuju se od rezervy dozvedet, kolik ropy jsem dostal
-                // + je opravdu potreba to posilat trubkou s delay 0?
+                #ifdef DISTRIBUTE_LOG
+                    std::cerr << Time << ") Central: Asking reserve for " << demandOil-oilToday << " units of oil.\n";
+                #endif
+                oilToday += CTR->Request(demandOil-oilToday);
+                #ifdef CENTRAL_LOG
+                    if(oilToday-demandOil < 0.0)
+                        std::cerr << Time << ") Central: Demand cannot be satisfied today, " << demandOil-oilToday << " units of oil are missing.\n";
+                #endif
             }
-            if(demandOil <= oilToday) {
+            else {
                 // reserve interactions
                 double missing = CTR->Missing();
                 double canSend = oilToday - demandOil;
-                if(missing && canSend != 0.0) {
+                std::cout << missing << "\n";
+                if(missing != 0.0 && canSend != 0.0) {
                     #ifdef DISTRIBUTE_LOG
-                        std::cerr << Time << ") Central: Sending " << ((missing<=oilToday)?missing:oilToday) << " to CTR\n";
+                        std::cerr << Time << ") Central: Sending " << ((missing<=canSend)?missing:canSend) << " to CTR\n";
                     #endif
                     CTR->Send((missing<=canSend)?missing:canSend);
                     oilToday = (missing<=canSend)?oilToday-missing:oilToday-canSend;
                 }
             }
-            // TODO: reflektovat potrebu ropy - vyslat pozadavek na ropovody (missing,demand,oilToday,input)
-
 
             #ifdef DISTRIBUTE_LOG
                 std::cerr << Time << ") Central: Sending " << oilToday*output.Kralupy << " to Kralupy\n";
@@ -449,6 +453,13 @@ class Central {
                 std::cerr << Time << ") Central: Sending " << oilToday*output.Litvinov << " to Litvinov\n";
             #endif
             loutput(oilToday*output.Litvinov);
+
+            // TODO: reflektovat potrebu ropy - vyslat pozadavek na ropovody (missing,demand,oilToday,input)
+            double totalNeed;
+            // ignores travel time -> will give reserve more than necessary (should not be a problem)
+            // can be improved by mapping requests...
+            totalNeed = demandOil + CTR->Missing();
+            // request for oil pipelines
         }
 
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }

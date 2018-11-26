@@ -12,7 +12,7 @@
     #define DISTRIBUTE_LOG
     #define CENTRAL_LOG
     //#define TRANSFER_LOG
-    //#define RESERVE_LOG
+    #define RESERVE_LOG
 #endif
 
 std::string red(std::string s) { return std::string("\33[91m") + s + std::string("\33[0m"); }
@@ -46,7 +46,7 @@ std::string style(std::string s, int format) {
 
     if((format&TEXTSTYLE) == BOLD) s = bold(s);
     else if((format&TEXTSTYLE) == ITALIC) s = italic(s);
-    
+
     return s;
 }
 
