@@ -16,6 +16,12 @@ typedef std::function<void(double)> Callback;
 struct ConsoleFirst {
     Facility waitForConsole;
     double t = Time;
+
+    std::map<double, int> deliveryPlanner;
+    bool expectMore() { 
+        if(deliveryPlanner.count(Time) == 0) return false;
+        else return deliveryPlanner[Time] == 0;
+    }
 } EventOrder;
 
 struct Products {
@@ -104,6 +110,7 @@ class Transfer: public Process {
             #ifdef TRANSFER_LOG
                 std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
             #endif
+            EventOrder.deliveryPlanner[Time] -= 1;
             moutput(mamount);
             if(seize) {
                 Release(EventOrder.waitForConsole);
@@ -130,6 +137,7 @@ class Pipe {
                     std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
                 #endif
                 (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
+                EventOrder.deliveryPlanner[Time+d] += 1;
             }
             sending.erase(Time+d);
         }
@@ -600,21 +608,37 @@ class Simulator: public Process {
                         newinput = true;
                         if(split.size() == 2) {
                             if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
-                                if(fix) { Druzba->Fix(); std::cerr << "Fix "; }
-                                else { Druzba->Break(); std::cerr << "Break "; }
-                                std::cerr << "Druzba.\n";
+                                if(fix) { 
+                                    std::cout << bold("Druzba") << " pipeline fixed.\n";
+                                    Druzba->Fix();
+                                } else {
+                                    std::cout << bold("Druzba") << " pipeline broken.\n";
+                                    Druzba->Break();
+                                }
                             } else if(split[1] == "ikl" || split[1] == "i") {
-                                if(fix) { IKL->Fix(); std::cerr << "Fix "; }
-                                else { IKL->Break(); std::cerr << "Break "; }
-                                std::cerr << "IKL.\n";
+                                if(fix) {
+                                    std::cout << bold("IKL") << " pipeline fixed.\n";
+                                    IKL->Fix();
+                                } else {
+                                    std::cout << bold("IKL") << " pipeline broken.\n";
+                                    IKL->Break();
+                                }
                             } else if(split[1] == "kralupy" || split[1] == "k") {
-                                if(fix) { Kralupy->Fix(); std::cerr << "Fix "; }
-                                else { Kralupy->Break(); std::cerr << "Break "; }
-                                std::cerr << "Kralupy.\n";
+                                if(fix) {
+                                    std::cout << bold("Kralupy") << " rafinery fixed.\n";
+                                    Kralupy->Fix();
+                                } else {
+                                    std::cout << bold("Kralupy") << " rafinery broken.\n";
+                                    Kralupy->Break();
+                                }
                             } else if(split[1] == "litvinov" || split[1] == "l") {
-                                if(fix) { Litvinov->Fix(); std::cerr << "Fix "; }
-                                else { Litvinov->Break(); std::cerr << "Break "; }
-                                std::cerr << "Litvinov.\n";
+                                if(fix) {
+                                    std::cout << bold("Litvinov") << " rafinery fixed.\n";
+                                    Litvinov->Fix();
+                                } else {
+                                    std::cout << bold("Litvinov") << " rafinery broken.\n";
+                                    Litvinov->Break();
+                                }
                             } else {
                                 invalid = true;
                             }
@@ -632,6 +656,9 @@ class Simulator: public Process {
                         std::cout << italic("Fix <facility>") << "                Fixes facility.\n";
                         std::cout << italic("Status") << "                        Prints status of system at current day.\n";
                         std::cout << italic("Status <facility>") << "             Prints status of facility at current day.\n";
+                        std::cout << italic("Day") << "                           Shows current day.\n";
+                        std::cout << italic("Skip <number>") << "                 Skip number of days.\n";
+                        std::cout << italic("Help") << "                          Prints this help.\n";
                         std::cout << bold("\nComodities:\n");
                         std::cout << italic("\tbenzin") << "|natural|b\n";
                         std::cout << italic("\tnaphta") << "|nafta|diesel|n|d\n";
