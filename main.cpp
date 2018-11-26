@@ -20,7 +20,7 @@ struct ConsoleFirst {
     std::map<double, int> deliveryPlanner;
     bool expectMore() { 
         if(deliveryPlanner.count(Time) == 0) return false;
-        else return deliveryPlanner[Time] == 0;
+        else return deliveryPlanner[Time] > 0;
     }
 } EventOrder;
 
