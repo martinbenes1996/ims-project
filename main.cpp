@@ -143,16 +143,8 @@ class Pipe {
         void Break() { f.Set(); }
         void Fix() { f.Reset(); }
         bool IsBroken() { return f.IsSet(); }
-
-    private:
-        std::string mname;
-        InputLimiter il;
-        double d;
-        Callback moutput;
-        bool mplanning = false;
-
-        double maxStorage = 100;
-        std::map<double, double> sending;
+    
+    protected:
         void PlanSending(double amount, double t) {
             if(amount == 0) return;
             double sum;
@@ -167,38 +159,47 @@ class Pipe {
             sending[t+d] += il.output(amount, sum);
             PlanSending(il.rest(amount, sum), t+1);
         }
+
+    private:
+        std::string mname;
+        InputLimiter il;
+        double d;
+        Callback moutput;
+        bool mplanning = false;
+
+        double maxStorage = 100;
+        std::map<double, double> sending;
+        
         Flagger f;
 };
 
 class Reserve {
     public:
-        Reserve(std::string name, double capacity, double maxTransport, double delay, Callback receiveFunc):
+        Reserve(std::string name, double capacity):
             mname(name), il(capacity), mlevel(capacity) {
-            there = new Pipe(mname+"_there", maxTransport, delay, getInput());
-            back = new Pipe(mname+"_back", maxTransport, delay, receiveFunc);
         }
 
-        void Send(double amount) {
-            there->Send(amount);
-        }
-        Callback getInput() { return [this](double amount){ this->Received(amount); }; }
-
-        void Received(double amount) {
-            (void)amount;
+        double Send(double amount) {
             #ifdef RESERVE_LOG
                 std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
             #endif
-            //back->Send(<neco>); // odesle, co se nevejde
+            mlevel += il.output(amount);
+            return il.rest(amount);
         }
 
-        void Request(double amount) {
-            // limit by the limit of reserves
-            back->Send(amount);
+        double Request(double amount) {
+            if(mlevel < amount) {
+                amount = mlevel;
+                mlevel = 0;
+                return amount;
+            } else {
+                mlevel -= amount;
+                return amount;
+            }
         }
 
         double Missing() {
             return 0;
-            // how much is missing (to full/to accomplish the EU rules?)
         }
 
         double Level() { return mlevel; }
@@ -207,9 +208,6 @@ class Reserve {
         std::string mname;
         InputLimiter il;
         double mlevel;
-
-        Pipe *there;
-        Pipe *back;
 };
 
 class OilPipeline {
