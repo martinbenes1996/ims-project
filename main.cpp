@@ -16,12 +16,6 @@ typedef std::function<void(double)> Callback;
 struct ConsoleFirst {
     Facility waitForConsole;
     double t = Time;
-
-    std::map<double, int> deliveryPlanner;
-    bool expectMore() { 
-        if(deliveryPlanner.count(Time) == 0) return false;
-        else return deliveryPlanner[Time] > 0;
-    }
 } EventOrder;
 
 struct Products {
@@ -110,7 +104,6 @@ class Transfer: public Process {
             #ifdef TRANSFER_LOG
                 std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
             #endif
-            EventOrder.deliveryPlanner[Time] -= 1;
             moutput(mamount);
             if(seize) {
                 Release(EventOrder.waitForConsole);
@@ -132,13 +125,15 @@ class Pipe {
             amount = f.Check(amount);
             PlanSending(amount, Time);
 
-            if(sending.count(Time + d) != 0) {
-                #ifdef PIPES_LOG
-                    std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
-                #endif
-                (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
+            if(sending.count(Time + d) == 0) {
+                amount = 0;
             }
-            if(mplanning) EventOrder.deliveryPlanner[Time+d] += 1;
+            
+            #ifdef PIPES_LOG
+                std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
+            #endif
+            (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
+            
             sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
@@ -227,6 +222,10 @@ class OilPipeline {
             
             s = new Source(mname, producing, p->getInput());
             s->Activate();
+
+            for(int i = 0; i < delay; i++) {
+                (new Transfer(0, getOutput()))->Activate(Time+i);
+            }
         }
         void Foo(double amount) {
             #ifdef PIPELINE_LOG
