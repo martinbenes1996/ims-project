@@ -13,19 +13,6 @@
 
 typedef std::function<void(double)> Callback;
 
-#ifdef OUTPUT_LOG
-    //#define SOURCE_LOG
-    //#define PIPES_LOG
-    //#define FLAGGER_LOG
-    //#define SIMULATOR_LOG
-    //#define RAFINERY_LOG
-    //#define PIPELINE_LOG
-    #define DISTRIBUTE_LOG
-    #define CENTRAL_LOG
-    //#define TRANSFER_LOG
-    //#define RESERVE_LOG
-#endif
-
 struct ConsoleFirst {
     Facility waitForConsole;
     double t = Time;
@@ -61,10 +48,10 @@ class Source : public Process {
                 moutput(mproduction);
 
                 if(seize) Release(EventOrder.waitForConsole);
-                Wait(1);   
+                Wait(1);
             } while(true);
 
-            
+
         }
     private:
         std::string mname;
@@ -558,12 +545,16 @@ class Simulator: public Process {
                     // next day
                     } else if(split[0] == "next"
                       || split[0] == "n") {
+<<<<<<< HEAD
+                        std::cerr << "Day "<<Time<<".\n";
+=======
 
                     // current day    
                     } else if(split[0] == "day"
                       || split[0] == "now") {
                         std::cout << "Now is " << style(std::string("Day ")+std::to_string( int(Time)), BOLD) << ".\n\n";
                         newinput = true;
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
 
                     } else if(split[0] == "skip"
                       || split[0] == "s") {
@@ -577,12 +568,21 @@ class Simulator: public Process {
                            || split[0] == "d") {
                         newinput = true;
                         if(split.size() <= 1) { // print all request values
+<<<<<<< HEAD
+                            std::cout << "Current demand:\n";
+                            std::cout << "- benzin: " << demand.benzin << "\n";
+                            std::cout << "- naphta: " << demand.naphta << "\n";
+                            std::cout << "- asphalt: " << demand.asphalt << "\n";
+                        // benzin
+                        } else if(split[1] == "benzin"
+=======
                             std::cout << bold("Current demand:\n");
                             std::cout << italic("- benzin: ") << demand.benzin << "\n";
                             std::cout << italic("- naphta: ") << demand.naphta << "\n";
                             std::cout << italic("- asphalt: ") << demand.asphalt << "\n\n";
                         // benzin    
                         } else if(split[1] == "benzin" 
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
@@ -591,12 +591,11 @@ class Simulator: public Process {
                                 demand.benzin = std::stod(split[2]);
                                 std::cerr << italic("New benzin value") << " is " << demand.benzin << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
 
                         // naphta
-                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" 
+                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n"
                                || split[1] == "diesel" || split[1] == "d") {
                             if(split.size() == 2) {         // print naphta request value
                                 std::cout << italic("Naphta demand: ") << demand.naphta << "\n\n";
@@ -604,10 +603,9 @@ class Simulator: public Process {
                                 demand.naphta = std::stod(split[2]);
                                 std::cerr << italic("New naphta value") << " is " << demand.naphta << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
-                        
+
                         // asphalt
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
@@ -616,15 +614,19 @@ class Simulator: public Process {
                                 demand.asphalt = std::stod(split[2]);
                                 std::cerr << italic("New asphalt value") << " is " << demand.asphalt << "\n\n";
                             } else {                        // error
+<<<<<<< HEAD
+                                std::cerr << "Invalid input.\n";
+
+=======
                                 invalid = true;
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
                             }
-                        
+
                         // error
                         } else {
-                            std::cerr << "Invalid input.\n";
                             invalid = true;
                         }
-                    
+
                     // break
                     } else if(split[0] == "break" || split[0] == "b" || split[0] == "fix" || split[0] == "f") {
                         bool fix = (split[0] == "fix" || split[0] == "f");
@@ -647,7 +649,6 @@ class Simulator: public Process {
                                 else { Litvinov->Break(); std::cerr << "Break "; }
                                 std::cerr << "Litvinov.\n";
                             } else {
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
                         }
@@ -685,7 +686,6 @@ class Simulator: public Process {
 
                     // unknown command
                     } else {
-                        std::cerr << "Invalid input.\n";
                         invalid = true;
                     }
                     if(!invalid) mem = line;
