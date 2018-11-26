@@ -225,7 +225,7 @@ class OilPipeline {
             s->Activate();
 
             for(int i = 0; i < delay; i++) {
-                (new Transfer(0, getOutput()))->Activate(Time+i);
+                (new Transfer(producing, getOutput()))->Activate(Time+i);
             }
         }
         void Foo(double amount) {
