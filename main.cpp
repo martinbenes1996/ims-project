@@ -13,19 +13,6 @@
 
 typedef std::function<void(double)> Callback;
 
-#ifdef OUTPUT_LOG
-    //#define SOURCE_LOG
-    //#define PIPES_LOG
-    //#define FLAGGER_LOG
-    //#define SIMULATOR_LOG
-    //#define RAFINERY_LOG
-    //#define PIPELINE_LOG
-    #define DISTRIBUTE_LOG
-    #define CENTRAL_LOG
-    //#define TRANSFER_LOG
-    //#define RESERVE_LOG
-#endif
-
 struct ConsoleFirst {
     Facility waitForConsole;
     double t = Time;
