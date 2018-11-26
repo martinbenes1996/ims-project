@@ -182,9 +182,9 @@ class Reserve {
 
         double Send(double amount) {
             #ifdef RESERVE_LOG
-                std::cerr << Time << ") Reserve " << mname << ": Received " << amount << ".\n";
+                std::cerr << Time << ") Reserve " << mname << ": Received " << amount <<".\n";
             #endif
-            mlevel -= il.output(amount);
+            mlevel += il.output(amount);
             return il.rest(amount);
         }
 
@@ -204,8 +204,8 @@ class Reserve {
 
         double Missing() {
             double miss = mlevel - 900.0;
-            if(miss < 0.0) miss = 0.0;
-            return miss;
+            if(miss >= 0.0) miss = 0.0;
+            return -miss;
         }
 
     private:
@@ -435,7 +435,6 @@ class Central {
                 // reserve interactions
                 double missing = CTR->Missing();
                 double canSend = oilToday - demandOil;
-                std::cout << missing << "\n";
                 if(missing != 0.0 && canSend != 0.0) {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << Time << ") Central: Sending " << ((missing<=canSend)?missing:canSend) << " to CTR\n";
