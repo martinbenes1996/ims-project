@@ -13,28 +13,9 @@
 
 typedef std::function<void(double)> Callback;
 
-#ifdef OUTPUT_LOG
-    //#define SOURCE_LOG
-    //#define PIPES_LOG
-    //#define FLAGGER_LOG
-    //#define SIMULATOR_LOG
-    //#define RAFINERY_LOG
-    //#define PIPELINE_LOG
-    #define DISTRIBUTE_LOG
-    #define CENTRAL_LOG
-    //#define TRANSFER_LOG
-    //#define RESERVE_LOG
-#endif
-
 struct ConsoleFirst {
     Facility waitForConsole;
     double t = Time;
-
-    std::map<double, int> deliveryPlanner;
-    bool expectMore() { 
-        if(deliveryPlanner.count(Time) == 0) return false;
-        else return deliveryPlanner[Time] == 0;
-    }
 } EventOrder;
 
 struct Products {
@@ -67,10 +48,10 @@ class Source : public Process {
                 moutput(mproduction);
 
                 if(seize) Release(EventOrder.waitForConsole);
-                Wait(1);   
+                Wait(1);
             } while(true);
 
-            
+
         }
     private:
         std::string mname;
@@ -123,7 +104,6 @@ class Transfer: public Process {
             #ifdef TRANSFER_LOG
                 std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
             #endif
-            EventOrder.deliveryPlanner[Time] -= 1;
             moutput(mamount);
             if(seize) {
                 Release(EventOrder.waitForConsole);
@@ -151,11 +131,9 @@ class Pipe {
                 #endif
                 (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
             }
-            if(mplanning) EventOrder.deliveryPlanner[Time+d] += 1;
             sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
-        void setPlanning() { mplanning = true; }
         void setOutput(Callback output) { moutput = output; }
 
         void Break() { f.Set(); }
@@ -167,7 +145,6 @@ class Pipe {
         InputLimiter il;
         double d;
         Callback moutput;
-        bool mplanning = false;
 
         double maxStorage = 100;
         std::map<double, double> sending;
@@ -236,8 +213,6 @@ class OilPipeline {
             mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
 
             p = new Pipe(mname, mmaximum, mdelay, getOutput());
-            p->setPlanning();
-            
             s = new Source(mname, producing, p->getInput());
             s->Activate();
         }
@@ -570,12 +545,16 @@ class Simulator: public Process {
                     // next day
                     } else if(split[0] == "next"
                       || split[0] == "n") {
+<<<<<<< HEAD
+                        std::cerr << "Day "<<Time<<".\n";
+=======
 
                     // current day    
                     } else if(split[0] == "day"
                       || split[0] == "now") {
                         std::cout << "Now is " << style(std::string("Day ")+std::to_string( int(Time)), BOLD) << ".\n\n";
                         newinput = true;
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
 
                     } else if(split[0] == "skip"
                       || split[0] == "s") {
@@ -589,12 +568,21 @@ class Simulator: public Process {
                            || split[0] == "d") {
                         newinput = true;
                         if(split.size() <= 1) { // print all request values
+<<<<<<< HEAD
+                            std::cout << "Current demand:\n";
+                            std::cout << "- benzin: " << demand.benzin << "\n";
+                            std::cout << "- naphta: " << demand.naphta << "\n";
+                            std::cout << "- asphalt: " << demand.asphalt << "\n";
+                        // benzin
+                        } else if(split[1] == "benzin"
+=======
                             std::cout << bold("Current demand:\n");
                             std::cout << italic("- benzin: ") << demand.benzin << "\n";
                             std::cout << italic("- naphta: ") << demand.naphta << "\n";
                             std::cout << italic("- asphalt: ") << demand.asphalt << "\n\n";
                         // benzin    
                         } else if(split[1] == "benzin" 
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
@@ -603,12 +591,11 @@ class Simulator: public Process {
                                 demand.benzin = std::stod(split[2]);
                                 std::cerr << italic("New benzin value") << " is " << demand.benzin << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
 
                         // naphta
-                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" 
+                        } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n"
                                || split[1] == "diesel" || split[1] == "d") {
                             if(split.size() == 2) {         // print naphta request value
                                 std::cout << italic("Naphta demand: ") << demand.naphta << "\n\n";
@@ -616,10 +603,9 @@ class Simulator: public Process {
                                 demand.naphta = std::stod(split[2]);
                                 std::cerr << italic("New naphta value") << " is " << demand.naphta << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
-                        
+
                         // asphalt
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
@@ -628,54 +614,41 @@ class Simulator: public Process {
                                 demand.asphalt = std::stod(split[2]);
                                 std::cerr << italic("New asphalt value") << " is " << demand.asphalt << "\n\n";
                             } else {                        // error
+<<<<<<< HEAD
+                                std::cerr << "Invalid input.\n";
+
+=======
                                 invalid = true;
+>>>>>>> a8d667d65c4bff7d619d4bdf9294bdb8ff88781b
                             }
-                        
+
                         // error
                         } else {
-                            std::cerr << "Invalid input.\n";
                             invalid = true;
                         }
-                    
+
                     // break
                     } else if(split[0] == "break" || split[0] == "b" || split[0] == "fix" || split[0] == "f") {
                         bool fix = (split[0] == "fix" || split[0] == "f");
                         newinput = true;
                         if(split.size() == 2) {
                             if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
-                                if(fix) { 
-                                    std::cout << bold("Druzba") << " pipeline fixed.\n";
-                                    Druzba->Fix();
-                                } else {
-                                    std::cout << bold("Druzba") << " pipeline broken.\n";
-                                    Druzba->Break();
-                                }
+                                if(fix) { Druzba->Fix(); std::cerr << "Fix "; }
+                                else { Druzba->Break(); std::cerr << "Break "; }
+                                std::cerr << "Druzba.\n";
                             } else if(split[1] == "ikl" || split[1] == "i") {
-                                if(fix) {
-                                    std::cout << bold("IKL") << " pipeline fixed.\n";
-                                    IKL->Fix();
-                                } else {
-                                    std::cout << bold("IKL") << " pipeline broken.\n";
-                                    IKL->Break();
-                                }
+                                if(fix) { IKL->Fix(); std::cerr << "Fix "; }
+                                else { IKL->Break(); std::cerr << "Break "; }
+                                std::cerr << "IKL.\n";
                             } else if(split[1] == "kralupy" || split[1] == "k") {
-                                if(fix) {
-                                    std::cout << bold("Kralupy") << " rafinery fixed.\n";
-                                    Kralupy->Fix();
-                                } else {
-                                    std::cout << bold("Kralupy") << " rafinery broken.\n";
-                                    Kralupy->Break();
-                                }
+                                if(fix) { Kralupy->Fix(); std::cerr << "Fix "; }
+                                else { Kralupy->Break(); std::cerr << "Break "; }
+                                std::cerr << "Kralupy.\n";
                             } else if(split[1] == "litvinov" || split[1] == "l") {
-                                if(fix) {
-                                    std::cout << bold("Litvinov") << " rafinery fixed.\n";
-                                    Litvinov->Fix();
-                                } else {
-                                    std::cout << bold("Litvinov") << " rafinery broken.\n";
-                                    Litvinov->Break();
-                                }
+                                if(fix) { Litvinov->Fix(); std::cerr << "Fix "; }
+                                else { Litvinov->Break(); std::cerr << "Break "; }
+                                std::cerr << "Litvinov.\n";
                             } else {
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
                         }
@@ -692,9 +665,6 @@ class Simulator: public Process {
                         std::cout << italic("Fix <facility>") << "                Fixes facility.\n";
                         std::cout << italic("Status") << "                        Prints status of system at current day.\n";
                         std::cout << italic("Status <facility>") << "             Prints status of facility at current day.\n";
-                        std::cout << italic("Day") << "                           Shows current day.\n";
-                        std::cout << italic("Skip <number>") << "                 Skip number of days.\n";
-                        std::cout << italic("Help") << "                          Prints this help.\n";
                         std::cout << bold("\nComodities:\n");
                         std::cout << italic("\tbenzin") << "|natural|b\n";
                         std::cout << italic("\tnaphta") << "|nafta|diesel|n|d\n";
@@ -716,7 +686,6 @@ class Simulator: public Process {
 
                     // unknown command
                     } else {
-                        std::cerr << "Invalid input.\n";
                         invalid = true;
                     }
                     if(!invalid) mem = line;
