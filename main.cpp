@@ -9,20 +9,9 @@
 
 #include "simlib.h"
 
-typedef std::function<void(double)> Callback;
+#include "log.h"
 
-#ifdef OUTPUT_LOG
-    //#define SOURCE_LOG
-    //#define PIPES_LOG
-    //#define FLAGGER_LOG
-    //#define SIMULATOR_LOG
-    //#define RAFINERY_LOG
-    //#define PIPELINE_LOG
-    #define DISTRIBUTE_LOG
-    #define CENTRAL_LOG
-    //#define TRANSFER_LOG
-    //#define RESERVE_LOG
-#endif
+typedef std::function<void(double)> Callback;
 
 struct ConsoleFirst {
     Facility waitForConsole;
@@ -516,6 +505,7 @@ class Simulator: public Process {
 
         void Behavior() {
             std::string mem;
+            int skip = 0;
             do {
                 #ifdef SIMULATOR_LOG
                 std::cerr << "Simulator step.\n";
@@ -524,11 +514,12 @@ class Simulator: public Process {
                 bool invalid = false;
                 std::string line;
                 do {
+                    if(skip > 0) { skip--; break; }
                     newinput = false;
                     invalid = false;
-                    std::cout << ">> " << std::flush;
+                    std::cout << "[Day " << Time << "] >> " << std::flush;
                     getline(std::cin, line);
-                    if(std::cin.eof()) { std::cout << "Quit\n"; exit(0); }
+                    if(std::cin.eof()) { std::cout << bold("\nQuit.\n"); exit(0); }
                     if(mem != "" && line == "") { line = mem; }
                     std::vector<std::string> split = SplitString(line);
 
@@ -538,29 +529,40 @@ class Simulator: public Process {
 
                     // next day
                     } else if(split[0] == "next"
-                      || split[0] == "n") {            
-                        std::cerr << "Day "<<Time<<".\n";
+                      || split[0] == "n") {
 
+                    // current day    
+                    } else if(split[0] == "day"
+                      || split[0] == "now") {
+                        std::cout << "Now is " << style(std::string("Day ")+std::to_string( int(Time)), BOLD) << ".\n\n";
+                        newinput = true;
+
+                    } else if(split[0] == "skip"
+                      || split[0] == "s") {
+                        if(split.size() == 2) {
+                            skip = std::stoi(split[1]) - 1;
+                        } else {
+                            invalid = true;
+                        }
                     // change request
                     } else if(split[0] == "demand"
                            || split[0] == "d") {
-                        invalid = true;
+                        newinput = true;
                         if(split.size() <= 1) { // print all request values
-                            std::cout << "Current demand:\n";
-                            std::cout << "- benzin: " << demand.benzin << "\n";
-                            std::cout << "- naphta: " << demand.naphta << "\n";
-                            std::cout << "- asphalt: " << demand.asphalt << "\n";
+                            std::cout << bold("Current demand:\n");
+                            std::cout << italic("- benzin: ") << demand.benzin << "\n";
+                            std::cout << italic("- naphta: ") << demand.naphta << "\n";
+                            std::cout << italic("- asphalt: ") << demand.asphalt << "\n\n";
                         // benzin    
                         } else if(split[1] == "benzin" 
                                || split[1] == "natural"
                                || split[1] == "b") {
                             if(split.size() == 2) {         // print benzin request value
-                                std::cout << "Benzin demand: " << demand.benzin << "\n";
+                                std::cout << italic("Benzin demand: ") << demand.benzin << "\n\n";
                             } else if(split.size() == 3) {  // set benzin request value
-                                double val = std::stod(split[2]);
-                                std::cerr << "New benzin value is " << val << "\n";
+                                demand.benzin = std::stod(split[2]);
+                                std::cerr << italic("New benzin value") << " is " << demand.benzin << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
 
@@ -568,31 +570,27 @@ class Simulator: public Process {
                         } else if(split[1] == "naphta" || split[1] == "nafta" || split[1] == "n" 
                                || split[1] == "diesel" || split[1] == "d") {
                             if(split.size() == 2) {         // print naphta request value
-                                std::cerr << "Maphta demand:\n";
-                                std::cout << "Naphta demand: " << demand.naphta << "\n";
+                                std::cout << italic("Naphta demand: ") << demand.naphta << "\n\n";
                             } else if(split.size() == 3) {  // set naphta request value
-                                double val = std::stod(split[2]);
-                                std::cerr << "New naphta value is " << val << "\n";
+                                demand.naphta = std::stod(split[2]);
+                                std::cerr << italic("New naphta value") << " is " << demand.naphta << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
                         
                         // asphalt
                         } else if(split[1] == "asphalt" || split[1] == "asfalt" || split[1] == "a") {
                             if(split.size() == 2) {         // print asphalt request value
-                                std::cout << "Asphalt demand: " << demand.asphalt << "\n";
+                                std::cout << italic("Asphalt demand: ") << demand.asphalt << "\n\n";
                             } else if(split.size() == 3) {  // set asphalt request value
-                                double val = std::stod(split[2]);
-                                std::cerr << "New asphalt value is " << val << "\n";
+                                demand.asphalt = std::stod(split[2]);
+                                std::cerr << italic("New asphalt value") << " is " << demand.asphalt << "\n\n";
                             } else {                        // error
-                                std::cerr << "Invalid input.\n";
-                                
+                                invalid = true;
                             }
                         
                         // error
                         } else {
-                            std::cerr << "Invalid input.\n";
                             invalid = true;
                         }
                     
@@ -618,21 +616,47 @@ class Simulator: public Process {
                                 else { Litvinov->Break(); std::cerr << "Break "; }
                                 std::cerr << "Litvinov.\n";
                             } else {
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
                         }
+                    
+                    // status
+                    } else if(split[0] == "help" || split[0] == "h") {
+                        newinput = true;
+                        std::cout << bold("Console commands: \n");
+                        std::cout << italic("Next") << "                          Count next day.\n";
+                        std::cout << italic("Demand") << "                        Print current demand.\n";
+                        std::cout << italic("Demand <comodity>") << "             Print current demand of comodity.\n";
+                        std::cout << italic("Demand <comodity> <number>") << "    Set current demand of comodity.\n";
+                        std::cout << italic("Break <facility>") << "              Breaks facility.\n";
+                        std::cout << italic("Fix <facility>") << "                Fixes facility.\n";
+                        std::cout << italic("Status") << "                        Prints status of system at current day.\n";
+                        std::cout << italic("Status <facility>") << "             Prints status of facility at current day.\n";
+                        std::cout << bold("\nComodities:\n");
+                        std::cout << italic("\tbenzin") << "|natural|b\n";
+                        std::cout << italic("\tnaphta") << "|nafta|diesel|n|d\n";
+                        std::cout << italic("\tasphalt") << "|asfalt|a\n";
+                        std::cout << bold("\nFacilities:\n");
+                        std::cout << italic("\tDruzba") << "|Druzhba|d\n";
+                        std::cout << italic("\tIKL") << "|i\n";
+                        std::cout << italic("\tKralupy") << "|k\n";
+                        std::cout << italic("\tLitvinov") << "|l\n";
+
+                    } else if(split[0] == "status" || split[0] == "stat") {
+                        newinput = true;
+                        std::cout << "Print status!\n";
 
                     // exit
                     } else if(split[0] == "quit" || split[0] == "exit" || split[0] == "q") {
+                        std::cout << bold("Quit.\n");
                         exit(0);
 
                     // unknown command
                     } else {
-                        std::cerr << "Invalid input.\n";
                         invalid = true;
                     }
                     if(!invalid) mem = line;
+                    else { std::cerr << red("Invalid input.\n"); }
                 } while(newinput || invalid);
                 
                 EventOrder.t = Time+1;
@@ -657,8 +681,8 @@ class Simulator: public Process {
 };
 
 int main() {
-    Print("Model Ropovod - SIMLIB/C++\n");
-    Init(1,100);
+    std::cout << style("Model Ropovod - SIMLIB/C++\n", BOLD);
+    Init(1,365);
     new Simulator();
     Run();
     return 0;
