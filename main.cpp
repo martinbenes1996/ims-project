@@ -137,11 +137,12 @@ class Pipe {
                     std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
                 #endif
                 (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
-                EventOrder.deliveryPlanner[Time+d] += 1;
             }
+            if(mplanning) EventOrder.deliveryPlanner[Time+d] += 1;
             sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
+        void setPlanning() { mplanning = true; }
         void setOutput(Callback output) { moutput = output; }
 
         void Break() { f.Set(); }
@@ -153,6 +154,7 @@ class Pipe {
         InputLimiter il;
         double d;
         Callback moutput;
+        bool mplanning = false;
 
         double maxStorage = 100;
         std::map<double, double> sending;
@@ -221,6 +223,8 @@ class OilPipeline {
             mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
 
             p = new Pipe(mname, mmaximum, mdelay, getOutput());
+            p->setPlanning();
+            
             s = new Source(mname, producing, p->getInput());
             s->Activate();
         }
