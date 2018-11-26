@@ -344,6 +344,11 @@ const double Druzba_Ratio = 0.515136718;
 const double Kralupy_Ratio = 0.379353755;
 const double Litvinov_Ratio = 0.620646244;
 
+const double IKL_Max = 27.4;
+const double Druzba_Max = 24.66;
+const double Kralupy_Max = 9.04;
+const double Litvinov_Max = 14.79;
+
 const double Fraction_Benzin = 0.19;
 const double Fraction_Naphta = 0.42;
 const double Fraction_Asphalt = 0.13;
@@ -355,6 +360,7 @@ struct CentInputRatio{
 struct CentOutputRatio{
     double Kralupy = Kralupy_Ratio;
     double Litvinov = Litvinov_Ratio;
+    double Reserve = 0.0;
 };
 struct Demand {
     double benzin = 4.38;
@@ -392,18 +398,22 @@ class Central {
             if(!Kralupy->IsBroken() && !Litvinov->IsBroken()) {     // if everything is normal (99% of all checks)
                 output.Kralupy = Kralupy_Ratio;
                 output.Litvinov = Litvinov_Ratio;
+                output.Reserve = 0.0;
             }
             else if(Kralupy->IsBroken() && Litvinov->IsBroken()) {
                 output.Kralupy = 0;
                 output.Litvinov = 0;
+                output.Reserve = 1;
             }
             else if(Kralupy->IsBroken()) {
                 output.Kralupy = 0;
-                output.Litvinov = 1;
+                output.Litvinov = Litvinov_Ratio;
+                output.Reserve = Kralupy_Ratio;
             }
             else {
-                output.Kralupy = 1;
+                output.Kralupy = Kralupy_Ratio;
                 output.Litvinov = 0;
+                output.Reserve = Litvinov_Ratio;
             }
 
             // central receives up to two deliveries of oil per day
@@ -421,18 +431,26 @@ class Central {
             }
             // demand correction - DEMAND FIRST, RESERVE SECOND
             if(demandOil > oilToday) {
-                // ask reserve for oil
-                #ifdef DISTRIBUTE_LOG
-                    std::cerr << Time << ") Central: Asking reserve for " << demandOil-oilToday << " units of oil.\n";
-                #endif
-                oilToday += CTR->Request(demandOil-oilToday);
+                // ask reserve for oil (only as much as the refineries will be able to process)
+                if(demandOil <= Kralupy_Max + Litvinov_Max) {
+                    #ifdef DISTRIBUTE_LOG
+                        std::cerr << Time << ") Central: Asking reserve for " << demandOil-oilToday << " units of oil.\n";
+                    #endif
+                    oilToday += CTR->Request(demandOil-oilToday);
+                }
+                else {
+                    #ifdef DISTRIBUTE_LOG
+                        std::cerr << Time << ") Central: Asking reserve for " << (Kralupy_Max+Litvinov_Max)-oilToday << " units of oil. Demand too high.\n";
+                    #endif
+                    oilToday += CTR->Request((Kralupy_Max+Litvinov_Max)-oilToday);
+                }
                 #ifdef CENTRAL_LOG
-                    if(oilToday-demandOil < 0.0)
+                    if(oilToday < demandOil)
                         std::cerr << Time << ") Central: Demand cannot be satisfied today, " << demandOil-oilToday << " units of oil are missing.\n";
                 #endif
             }
             else {
-                // reserve interactions
+                // reserve interactions - send
                 double missing = CTR->Missing();
                 double canSend = oilToday - demandOil;
                 if(missing != 0.0 && canSend != 0.0) {
@@ -445,20 +463,33 @@ class Central {
             }
 
             #ifdef DISTRIBUTE_LOG
-                std::cerr << Time << ") Central: Sending " << oilToday*output.Kralupy << " to Kralupy\n";
+                std::cerr << Time << ") Central: Sending " << oilToday*output.Kralupy << " to Kralupy.\n";
             #endif
             koutput(oilToday*output.Kralupy);
             #ifdef DISTRIBUTE_LOG
-                std::cerr << Time << ") Central: Sending " << oilToday*output.Litvinov << " to Litvinov\n";
+                std::cerr << Time << ") Central: Sending " << oilToday*output.Litvinov << " to Litvinov.\n";
             #endif
             loutput(oilToday*output.Litvinov);
+            #ifdef DISTRIBUTE_LOG
+                std::cerr << Time << ") Central: Sending " << oilToday*output.Reserve << " to CTN.\n";
+            #endif
+            double lostOil;
+            lostOil = CTR->Send(oilToday*output.Reserve);
+            #ifdef DISTRIBUTE_LOG
+                if(lostOil)
+                    std::cerr << Time << ") Central: " << lostOil << " units of oil lost.\n";
+            #endif
 
             // TODO: reflektovat potrebu ropy - vyslat pozadavek na ropovody (missing,demand,oilToday,input)
             double totalNeed;
             // ignores travel time -> will give reserve more than necessary (should not be a problem)
             // can be improved by mapping requests...
-            totalNeed = demandOil + CTR->Missing();
-            // request for oil pipelines
+            double Kralupy_req = (output.Kralupy==0.0)?0.0:Kralupy_Max;
+            double Litvinov_req = (output.Litvinov==0.0)?0.0:Litvinov_Max;
+            totalNeed = (demandOil>(Kralupy_req+Litvinov_req))?(Kralupy_req+Litvinov_req):demandOil + CTR->Missing();
+            // request for oil pipelines - zaridit vyuziti maximalni kapacity
+            // Druzba->req(totalNeed*input.Druzba);
+            // IKL->req(totalNeed*input.IKL);
         }
 
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
