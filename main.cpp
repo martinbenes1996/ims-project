@@ -83,6 +83,7 @@ class InputLimiter {
             mmaximum(maximum) {}
         double output(double amount, double basis=0) { return (amount < (mmaximum-basis))?amount:(mmaximum-basis); }
         double rest(double amount, double basis=0) { return (amount < (mmaximum-basis))?0:(amount-mmaximum+basis); }
+        double getMaximum() { return mmaximum; }
     private:
         double mmaximum;
 };
@@ -198,11 +199,14 @@ class Reserve {
             }
         }
 
-        double Missing() {
-            return 0;
-        }
-
+        double getCapacity() { return il.getMaximum(); }
         double Level() { return mlevel; }
+
+        double Missing() {
+            int miss = mlevel - 900;
+            if(miss < 0) miss = 0;
+            return miss;
+        }
 
     private:
         std::string mname;
@@ -353,7 +357,7 @@ struct CentOutputRatio{
     double Kralupy = Kralupy_Ratio;
     double Litvinov = Litvinov_Ratio;
 };
-struct Demand{
+struct Demand {
     double benzin = 4.38;
     double naphta = 12.96;
     double asphalt = 1.21;
