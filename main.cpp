@@ -398,22 +398,22 @@ class Central {
             if(!Kralupy->IsBroken() && !Litvinov->IsBroken()) {     // if everything is normal (99% of all checks)
                 output.Kralupy = Kralupy_Ratio;
                 output.Litvinov = Litvinov_Ratio;
-                output.Reserve = 0.0;
+                //output.Reserve = 0.0;
             }
             else if(Kralupy->IsBroken() && Litvinov->IsBroken()) {
                 output.Kralupy = 0;
                 output.Litvinov = 0;
-                output.Reserve = 1;
+                //output.Reserve = 1;
             }
             else if(Kralupy->IsBroken()) {
                 output.Kralupy = 0;
-                output.Litvinov = Litvinov_Ratio;
-                output.Reserve = Kralupy_Ratio;
+                output.Litvinov = 1;
+                //output.Reserve = Kralupy_Ratio;
             }
             else {
-                output.Kralupy = Kralupy_Ratio;
+                output.Kralupy = 1;
                 output.Litvinov = 0;
-                output.Reserve = Litvinov_Ratio;
+                //output.Reserve = Litvinov_Ratio;
             }
 
             // central receives up to two deliveries of oil per day
@@ -457,24 +457,44 @@ class Central {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << Time << ") Central: Sending " << ((missing<=canSend)?missing:canSend) << " to CTR\n";
                     #endif
+                    // send all that is over demand ???
                     CTR->Send((missing<=canSend)?missing:canSend);
                     oilToday = (missing<=canSend)?oilToday-missing:oilToday-canSend;
+                    //double returnOil;
+                    //returnOil = CTR->Send(canSend);
+                    //oilToday -= (canSend-returnOil);
                 }
             }
+            double overflow = 0.0;
 
+            if(oilToday*output.Kralupy > Kralupy_Max) {
+                koutput(Kralupy_Max);
+                overflow += oilToday*output.Kralupy - Kralupy_Max;
+            }
+            else
+                koutput(oilToday*output.Kralupy);
             #ifdef DISTRIBUTE_LOG
-                std::cerr << Time << ") Central: Sending " << oilToday*output.Kralupy << " to Kralupy.\n";
+                std::cerr << Time << ") Central: Sending " << oilToday*output.Kralupy-overflow << " to Kralupy.\n";
             #endif
-            koutput(oilToday*output.Kralupy);
+
+            if(oilToday*output.Litvinov > Litvinov_Max) {
+                loutput(Litvinov_Max);
+                overflow += oilToday*output.Litvinov - Litvinov_Max;
+            }
+            else
+                loutput(oilToday*output.Litvinov);
             #ifdef DISTRIBUTE_LOG
-                std::cerr << Time << ") Central: Sending " << oilToday*output.Litvinov << " to Litvinov.\n";
+                double x = (oilToday*output.Litvinov > Litvinov_Max)?Litvinov_Max:(oilToday*output.Litvinov);
+                std::cerr << Time << ") Central: Sending " << x << " to Litvinov.\n";
             #endif
-            loutput(oilToday*output.Litvinov);
+
+            if(!output.Kralupy && !output.Litvinov)
+                overflow = oilToday;
             #ifdef DISTRIBUTE_LOG
-                std::cerr << Time << ") Central: Sending " << oilToday*output.Reserve << " to CTN.\n";
+                std::cerr << Time << ") Central: Sending " << overflow << " to CTN.\n";
             #endif
             double lostOil;
-            lostOil = CTR->Send(oilToday*output.Reserve);
+            lostOil = CTR->Send(overflow);
             #ifdef DISTRIBUTE_LOG
                 if(lostOil)
                     std::cerr << Time << ") Central: " << lostOil << " units of oil lost.\n";
