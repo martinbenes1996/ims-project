@@ -11,6 +11,8 @@
 
 #include "log.h"
 
+const double Numeric_Const = 1.0e-03;           // prevent stupidly small numbers
+
 typedef std::function<void(double)> Callback;
 
 struct ConsoleFirst {
@@ -189,6 +191,7 @@ class Reserve {
         }
 
         double Request(double amount) {
+            if(amount<=Numeric_Const) return 0;       // ignore nonsense
             if(mlevel < amount) {
                 amount = mlevel;
                 mlevel = 0;
@@ -430,9 +433,13 @@ class Central {
                 demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
             }
             // demand correction - DEMAND FIRST, RESERVE SECOND
-            if(demandOil > oilToday) {
+            short KralupyBreakFlag;
+            short LitvinovBreakFlag;
+            KralupyBreakFlag = (Kralupy->IsBroken())?0:1;
+            LitvinovBreakFlag = (Litvinov->IsBroken())?0:1;
+            if(demandOil > oilToday && (demandOil-oilToday > Numeric_Const)) {
                 // ask reserve for oil (only as much as the refineries will be able to process)
-                if(demandOil <= Kralupy_Max + Litvinov_Max) {
+                if(demandOil <= Kralupy_Max*KralupyBreakFlag + Litvinov_Max*LitvinovBreakFlag) {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << Time << ") Central: Asking reserve for " << demandOil-oilToday << " units of oil.\n";
                     #endif
@@ -440,12 +447,14 @@ class Central {
                 }
                 else {
                     #ifdef DISTRIBUTE_LOG
-                        std::cerr << Time << ") Central: Asking reserve for " << (Kralupy_Max+Litvinov_Max)-oilToday << " units of oil. Demand too high.\n";
+                        double help = ((Kralupy_Max*KralupyBreakFlag+Litvinov_Max*LitvinovBreakFlag)-oilToday>0.0)?(Kralupy_Max*KralupyBreakFlag+Litvinov_Max*LitvinovBreakFlag)-oilToday:0.0;
+                        if(help<Numeric_Const) help = 0.0;
+                        std::cerr << Time << ") Central: Asking reserve for " << help << " units of oil. Demand too high.\n";
                     #endif
-                    oilToday += CTR->Request((Kralupy_Max+Litvinov_Max)-oilToday);
+                    oilToday += CTR->Request((Kralupy_Max*KralupyBreakFlag+Litvinov_Max*LitvinovBreakFlag)-oilToday);
                 }
                 #ifdef CENTRAL_LOG
-                    if(oilToday < demandOil)
+                    if(oilToday < demandOil || (Kralupy_Max*KralupyBreakFlag+Litvinov_Max*LitvinovBreakFlag)<demandOil)
                         std::cerr << Time << ") Central: Demand cannot be satisfied today, " << demandOil-oilToday << " units of oil are missing.\n";
                 #endif
             }
@@ -507,9 +516,21 @@ class Central {
             double Kralupy_req = (output.Kralupy==0.0)?0.0:Kralupy_Max;
             double Litvinov_req = (output.Litvinov==0.0)?0.0:Litvinov_Max;
             totalNeed = (demandOil>(Kralupy_req+Litvinov_req))?(Kralupy_req+Litvinov_req):demandOil + CTR->Missing();
-            // request for oil pipelines - zaridit vyuziti maximalni kapacity
-            // Druzba->req(totalNeed*input.Druzba);
-            // IKL->req(totalNeed*input.IKL);
+            // request for oil pipelines
+            // if one oilPipeline is full, second one shares the burden
+            double toIKL = 0.0;             // shift oil demand to ikl
+            double toDruzba = 0.0;          // shift oil demand to druzba
+            if(totalNeed*input.Druzba > Druzba_Max) toIKL = totalNeed*input.Druzba - Druzba_Max;
+            if(totalNeed*input.IKL > IKL_Max) toDruzba = totalNeed*input.IKL - IKL_Max;
+            #ifdef CENTRAL_LOG
+                std::cerr << Time << ") Central: Setting production for Druzba to " << totalNeed*input.Druzba + toDruzba << ".\n";
+            #endif
+            Druzba->setProduction(totalNeed*input.Druzba + toDruzba);
+            #ifdef CENTRAL_LOG
+                std::cerr << Time << ") Central: Setting production for IKL to " << totalNeed*input.IKL + toIKL << ".\n";
+            #endif
+            IKL->setProduction(totalNeed*input.IKL + toIKL);
+
         }
 
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
