@@ -53,6 +53,8 @@ class Source : public Process {
 
 
         }
+
+        void setProduction(double p) { mproduction = p;}
     private:
         std::string mname;
         double mproduction;
@@ -138,7 +140,6 @@ class Pipe {
             sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
-        void setPlanning() { mplanning = true; }
         void setOutput(Callback output) { moutput = output; }
 
         void Break() { f.Set(); }
@@ -166,7 +167,6 @@ class Pipe {
         InputLimiter il;
         double d;
         Callback moutput;
-        bool mplanning = false;
 
         double maxStorage = 100;
         std::map<double, double> sending;
@@ -217,10 +217,9 @@ class Reserve {
 class OilPipeline {
     public:
         OilPipeline(std::string name, double maxProduction, double producing, double delay):
-            mname(name), mmaximum(maxProduction), mproducing(producing), mdelay(delay) {
+            mname(name), mmaximum(maxProduction), mdelay(delay) {
 
             p = new Pipe(mname, mmaximum, mdelay, getOutput());
-            p->setPlanning();
 
             s = new Source(mname, producing, p->getInput());
             s->Activate();
@@ -243,11 +242,11 @@ class OilPipeline {
         void Fix() { p->Fix(); }
 
         void setOutput(Callback output) { moutput = output; }
+        void setProduction(double production) { s->setProduction(production); }
 
     private:
         std::string mname;
         double mmaximum;
-        double mproducing;
         double mdelay;
         bool broken = false;
 
