@@ -52,11 +52,11 @@ class Source : public Process {
                 if(seize) Release(EventOrder.waitForConsole);
                 Wait(1);
             } while(true);
-
-
         }
 
         void setProduction(double p) { mproduction = p;}
+        double getProduction() { return mproduction; }
+
     private:
         std::string mname;
         double mproduction;
@@ -114,18 +114,15 @@ class Transfer: public Process {
                 Release(EventOrder.waitForConsole);
             }
         }
-
-
     private:
         double mamount;
         Callback moutput;
-
 };
+
 class Pipe {
     public:
         Pipe(std::string name, double maximum, double delay, Callback output=[](double){ std::cerr << "Output not set!\n"; }):
-            mname(name), il(maximum), d(delay), moutput(output) {
-        }
+            mname(name), il(maximum), d(delay), moutput(output) {}
         void Send(double amount) {
             amount = f.Check(amount);
             PlanSending(amount, Time);
@@ -137,32 +134,52 @@ class Pipe {
             #ifdef PIPES_LOG
                 std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
             #endif
-            (new Transfer(sending[Time+d], moutput))->Activate(Time + d);
+            (new Transfer(sending[Time+d], getOutput()))->Activate(Time + d);
 
-            sending.erase(Time+d);
         }
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
         void setOutput(Callback output) { moutput = output; }
+
+        Callback getOutput() {
+            return [this](double amount){
+                sending.erase(Time);
+                return this->moutput(amount);
+            };
+        }
 
         void Break() { f.Set(); }
         void Fix() { f.Reset(); }
         bool IsBroken() { return f.IsSet(); }
 
+        std::map<double,double> getCurrentFlow() {
+            std::map<double,double> clone;
+            for(int i = Time; i < Time+d; i++) {
+                double val = (sending.count(i) > 0) ? sending[i] : 0;
+                clone.insert( std::make_pair(i, val) );
+            }
+            return clone;
+        }
+
+        void setSending(std::map<double,double> s) {
+            sending = s;
+        }
+
     protected:
         void PlanSending(double amount, double t) {
             if(amount == 0) return;
-            double sum;
-            // sum all in <time, time+d>
-            sum = 0;
+            double sum = 0;
             for(int i = t; i <= (t+d); i++) {
                 if(sending.count(i)) sum += sending[i];
             }
             if((sum+amount) > maxStorage) {
                 amount = maxStorage - sum;
             }
-            sending[t+d] += il.output(amount, sum);
-            PlanSending(il.rest(amount, sum), t+1);
+            sending[t+d] += il.output(amount);
+            PlanSending(il.rest(amount), t+1);
         }
+
+        //double output(double amount, double basis=0) { return (amount < (mmaximum-basis))?amount:(mmaximum-basis); }
+        //double rest(double amount, double basis=0) { return (amount < (mmaximum-basis))?0:(amount-mmaximum+basis); }
 
     private:
         std::string mname;
@@ -217,6 +234,27 @@ class Reserve {
         double mlevel;
 };
 
+struct PipelineStatus {
+    std::string name;
+    std::map<double,double> delivery;
+    double production;
+    double maximum;
+    bool broken;
+
+    void print() {
+        std::string prod = double2str(this->production);
+        if(this->production == this->maximum) prod = red(prod);
+        else if(this->production == 0) prod = red(prod);
+        else prod = green(prod);
+
+        std::cout << bold(this->name);
+        for(int i = this->name.length(); i <= 10; i++) {std::cout << " ";}
+        std::cout << italic("pipeline\t");
+        std::cout << bold(((this->broken)?red("Broken"):green("OK"))) << "\t";
+        std::cout << prod << "/" << double2str(this->maximum) << "\n";
+    }
+};
+
 class OilPipeline {
     public:
         OilPipeline(std::string name, double maxProduction, double producing, double delay):
@@ -227,9 +265,12 @@ class OilPipeline {
             s = new Source(mname, producing, p->getInput());
             s->Activate();
 
+            std::map<double,double> plan;
             for(int i = 0; i < delay; i++) {
-                (new Transfer(producing, getOutput()))->Activate(Time+i);
+                (new Transfer(producing, p->getOutput()))->Activate(Time+i);
+                plan.insert( std::make_pair(Time+i, producing) );
             }
+            p->setSending(plan);
         }
         void Foo(double amount) {
             #ifdef PIPELINE_LOG
@@ -239,13 +280,23 @@ class OilPipeline {
         }
         Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
 
-
         bool IsBroken() { return p->IsBroken(); }   // returns true if the refinery is broken
         void Break() { p->Break(); }
         void Fix() { p->Fix(); }
 
         void setOutput(Callback output) { moutput = output; }
         void setProduction(double production) { s->setProduction(production); }
+
+        PipelineStatus getStatus() {
+            PipelineStatus ps;
+            ps.name = mname;
+            ps.delivery = p->getCurrentFlow();
+            ps.production = s->getProduction();
+            ps.maximum = mmaximum;
+            ps.broken = p->IsBroken();
+            return ps;
+        }
+        
 
     private:
         std::string mname;
@@ -259,6 +310,28 @@ class OilPipeline {
         Source* s;
 };
 
+struct RafineryStatus {
+    std::string name;
+    std::map<double,double> production;
+    double maximum;
+    bool broken;
+
+    void print() {
+        double val = (this->production.count(Time) > 0) ? this->production[Time] : 0;
+        if(val < 0.001) val = 0;
+        std::string prod = double2str(val);
+        if(val == this->maximum) prod = red(prod);
+        else if(val == 0) prod = red(prod);
+        else prod = green(prod);
+
+        std::cout << bold(this->name);
+        for(int i = this->name.length(); i <= 10; i++) {std::cout << " ";}
+        std::cout << italic("rafinery\t");
+        std::cout << bold(((this->broken)?red("Broken"):green("OK"))) << "\t";
+        std::cout << prod << "/" << double2str(this->maximum) << "\n";
+        
+    }
+};
 class FractionalDestillation: public Event {
     public:
         FractionalDestillation(double amount, Productor output):
@@ -315,6 +388,24 @@ class Rafinery: public Event {
         Productor getOutput() { return [this](Products p){this->output(p);}; }
         void setProductor(Productor p) {
             mproductor = p;
+        }
+
+        RafineryStatus getStatus() {
+            RafineryStatus rs;
+            rs.name = mname;
+            rs.production = getProduction();
+            rs.maximum = il.getMaximum();
+            rs.broken = f.IsSet();
+            return rs;
+        }
+
+        std::map<double,double> getProduction() {
+            std::map<double,double> clone;
+            for(int i = Time; i < Time+d; i++) {
+                double val = (processing.count(i) > 0)? processing[i] : 0;
+                clone.insert( std::make_pair(i, val) );
+            }
+            return clone;
         }
 
     private:
@@ -721,6 +812,7 @@ class Simulator: public Process {
                                     std::cout << bold("Druzba") << " pipeline broken.\n";
                                     Druzba->Break();
                                 }
+                                std::cout << "\n";
                             } else if(split[1] == "ikl" || split[1] == "i") {
                                 if(fix) {
                                     std::cout << bold("IKL") << " pipeline fixed.\n";
@@ -729,6 +821,7 @@ class Simulator: public Process {
                                     std::cout << bold("IKL") << " pipeline broken.\n";
                                     IKL->Break();
                                 }
+                                std::cout << "\n";
                             } else if(split[1] == "kralupy" || split[1] == "k") {
                                 if(fix) {
                                     std::cout << bold("Kralupy") << " rafinery fixed.\n";
@@ -737,6 +830,7 @@ class Simulator: public Process {
                                     std::cout << bold("Kralupy") << " rafinery broken.\n";
                                     Kralupy->Break();
                                 }
+                                std::cout << "\n";
                             } else if(split[1] == "litvinov" || split[1] == "l") {
                                 if(fix) {
                                     std::cout << bold("Litvinov") << " rafinery fixed.\n";
@@ -745,10 +839,25 @@ class Simulator: public Process {
                                     std::cout << bold("Litvinov") << " rafinery broken.\n";
                                     Litvinov->Break();
                                 }
+                                std::cout << "\n";
+                            } else if(split[1] == "all" || split[1] == "a") {
+                                if(fix) {
+                                    if(Druzba->IsBroken()) { std::cout << bold("Druzba") << " pipeline fixed.\n"; Druzba->Fix();}
+                                    if(IKL->IsBroken()) { std::cout << bold("IKL") << " pipeline fixed.\n"; IKL->Fix(); }
+                                    if(Kralupy->IsBroken()) { std::cout << bold("Kralupy") << " rafinery fixed.\n"; Kralupy->Fix(); }
+                                    if(Litvinov->IsBroken()) { std::cout << bold("Litvinov") << " rafinery fixed.\n"; Litvinov->Fix(); }
+                                } else {
+                                    if(!Druzba->IsBroken()) { std::cout << bold("Druzba") << " pipeline broken.\n"; Druzba->Break(); }
+                                    if(!IKL->IsBroken()) { std::cout << bold("IKL") << " pipeline broken.\n"; IKL->Break(); }
+                                    if(!Kralupy->IsBroken()) { std::cout << bold("Kralupy") << " rafinery broken.\n"; Kralupy->Break(); }
+                                    if(!Litvinov->IsBroken()) { std::cout << bold("Litvinov") << " rafinery broken.\n"; Litvinov->Break(); }
+                                }
+                                std::cout << "\n";
                             } else {
-                                std::cerr << "Invalid input.\n";
                                 invalid = true;
                             }
+                        } else {
+                            invalid = true;
                         }
 
                     // status
@@ -778,7 +887,53 @@ class Simulator: public Process {
 
                     } else if(split[0] == "status" || split[0] == "stat") {
                         newinput = true;
-                        std::cout << "Print status!\n";
+                        PipelineStatus druzbastat = Druzba->getStatus();
+                        PipelineStatus iklstat = IKL->getStatus();
+                        RafineryStatus kralupystat = Kralupy->getStatus();
+                        RafineryStatus litvinovstat = Litvinov->getStatus();
+                        if(split.size() > 1) {
+                            if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
+                                druzbastat.print();
+                                for(auto& it: druzbastat.delivery) {
+                                    if(it.second > 0.001) {
+                                        std::cout << "Time " << it.first << ": " << it.second << "\n";
+                                    }
+                                }
+                                std::cout << "\n";
+                            } else if(split[1] == "ikl" || split[1] == "i") {
+                                iklstat.print();
+                                for(auto& it: iklstat.delivery) {
+                                    if(it.second > 0.001) {
+                                        std::cout << "Time " << it.first << ": " << it.second << "\n";
+                                    }
+                                }
+                                std::cout << "\n";
+                            } else if(split[1] == "kralupy" || split[1] == "k") {
+                                kralupystat.print();
+                                for(auto& it: kralupystat.production) {
+                                    if(it.second > 0.001) {
+                                        std::cout << "Time " << it.first << ": " << it.second << "\n";
+                                    }
+                                }
+                                std::cout << "\n";
+                            } else if(split[1] == "litvinov" || split[1] == "l") {
+                                litvinovstat.print();
+                                for(auto& it: litvinovstat.production) {
+                                    if(it.second > 0.001) {
+                                        std::cout << "Time " << it.first << ": " << it.second << "\n";
+                                    }
+                                }
+                                std::cout << "\n";
+                            } else {
+                                invalid = true;
+                            }
+                        } else {
+                            druzbastat.print();
+                            iklstat.print();
+                            kralupystat.print();
+                            litvinovstat.print();
+                            std::cout << "\n";
+                        }
 
                     // exit
                     } else if(split[0] == "quit" || split[0] == "exit" || split[0] == "q") {
@@ -787,7 +942,6 @@ class Simulator: public Process {
 
                     // unknown command
                     } else {
-                        std::cerr << "Invalid input.\n";
                         invalid = true;
                     }
                     if(!invalid) mem = line;

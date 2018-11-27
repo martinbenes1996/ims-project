@@ -2,6 +2,8 @@
 #define LOG_H
 
 #include <functional>
+#include <sstream>
+
 #ifdef OUTPUT_LOG
     //#define SOURCE_LOG
     //#define PIPES_LOG
@@ -48,6 +50,12 @@ std::string style(std::string s, int format) {
     else if((format&TEXTSTYLE) == ITALIC) s = italic(s);
 
     return s;
+}
+
+std::string double2str(double v) {
+    std::ostringstream ss;
+    ss << v;
+    return ss.str();
 }
 
 #endif // LOG_H
