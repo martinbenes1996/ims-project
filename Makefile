@@ -1,26 +1,16 @@
 
-cc = g++
-flags = -std=c++17 -pedantic -Wall -Wextra -g -O0
-defines = -DOUTPUT_LOG
-linkings = -lm -lsimlib
 
-src = $(wildcard *.cpp)
-head = $(wildcard *.h)
-obj = $(src:.c=.o)
 
 #output settings
 output = model
 all: $(output)
 
-# linking
-$(output) : $(obj)
-	@echo "Linking project into $@.";\
-	$(cc) $(flags) $(defines) $(obj) -o $@ $(linkings)
-  
-# compiling
-%.o : %.c
-	@echo "Compiling $@.";\
-	$(cc) $(flags) $(defines) -c $< -o $@
+$(output): 
+	@printf "";\
+	$(MAKE) -C src/ -s
+	@printf "";\
+	cp src/$@ .
+
 
 # run
 .PHONY: run
@@ -31,5 +21,7 @@ run:
 # clean
 .PHONY: clean
 clean:
-	@echo "Cleaning generated files.";\
-	rm -rf *~ *.o *.gch *.dep $(output) $(output).tar.gz *.out
+	@echo "Cleaning output.";\
+	rm -rf $(output) $(output).tar.gz
+	@printf "";\
+	$(MAKE) clean -C src/ -s
