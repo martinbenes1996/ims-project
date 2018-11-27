@@ -53,7 +53,7 @@ class FractionalDestillation: public Event {
 /**
  * @brief Rafinery class.
  */
-class Rafinery: public Event {
+class Rafinery{
     public:
         /**
          * @brief Constructor.
@@ -72,18 +72,6 @@ class Rafinery: public Event {
          * @brief Input callback getter.
          */
         Callback getInput() { return [this](double amount){ this->Enter(amount); }; }
-
-        /**
-         * @brief Overriden method, called via event from calendar.
-         */
-        void Behavior() {
-            #warning output here!
-            //moutput(processing.at(Time));
-            #ifdef RAFINERY_LOG
-                std::cerr << Time << ") Rafinery " << mname << ": Processed " << processing.at(Time) << "\n";
-            #endif
-            processing.erase(Time);
-        }
 
         /** @brief Indicator of being broken. */
         bool IsBroken() { return f.IsSet(); }

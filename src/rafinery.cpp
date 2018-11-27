@@ -24,7 +24,7 @@ Products FractionalDestillation::Destillate(double amount) {
     p.benzin = 0.19*amount;
     p.naphta = 0.42*amount;
     p.asphalt = 0.13*amount;
-    moutput(p);
+    return p;
 }
 
 

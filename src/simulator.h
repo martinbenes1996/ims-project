@@ -27,7 +27,23 @@ class Simulator: public Process {
         /**
          * @brief Productor getter.
          */
-        Productor getProductor() { return [this](Products p){ this->AcquireProducts(p); }; }
+        Productor getProductor() { return [this](Products p){ return this->AcquireProducts(p); }; }
+        void ResolveDayDemand() {
+            double benzin = mproducts.benzin - demand.benzin;
+            double naphta = mproducts.naphta - demand.naphta;
+            double asphalt = mproducts.asphalt - demand.asphalt;
+            std::string benzinS = double2str(benzin), naphtaS = double2str(naphta), asphaltS = double2str(asphalt);
+            benzinS = (benzin < 0) ? red(benzinS) : ((benzin > 0) ? green(benzinS) : benzinS );
+            naphtaS = (naphta < 0) ? red(naphtaS) : ((naphta > 0) ? green(naphtaS) : naphtaS );
+            asphaltS = (asphalt < 0) ? red(asphaltS) : ((asphalt > 0) ? green(asphaltS) : asphaltS );
+            
+            std::cout << bold("Demand satisfaction:\n");
+            std::cout << italic("\t- benzin\t") << benzinS << "\n";
+            std::cout << italic("\t- naphta\t") << naphtaS << "\n";
+            std::cout << italic("\t- asphalt\t") << asphaltS << "\n";
+            std::cout << "\n";
+            mproducts = Products();
+        }
 
 
         /**

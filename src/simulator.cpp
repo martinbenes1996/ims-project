@@ -345,6 +345,7 @@ void Simulator::TerminalLoop() {
         EventOrder.t = Time+1;
         Seize(EventOrder.waitForConsole);
         Wait(1);
+        ResolveDayDemand();
         Release(EventOrder.waitForConsole);
 
     // loop days
