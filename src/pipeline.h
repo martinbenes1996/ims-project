@@ -8,40 +8,52 @@
 
 #include "tools.h"
 
+/**
+ * @brief Source of oil.
+ */
 class Source : public Process {
     public:
+        /**
+         * @brief Constructor.
+         * @param name          Name (for printing).
+         * @param production    Initial production.
+         * @param output        Output callback.
+         */
         Source(std::string name, double production, Callback output):
             mname(name), mproduction(production), moutput(output) {}
-        void Behavior() {
-            do {
+        
+        /**
+         * @brief Overriden function, called through event in calendar.
+         */
+        void Behavior();
 
-                bool seize = (Time >= EventOrder.t);
-                if(seize) Seize(EventOrder.waitForConsole);
-
-                #ifdef SOURCE_LOG
-                    std::cerr << Time << ") Source " << mname << ": Produced " << mproduction << ".\n";
-                #endif
-                moutput(mproduction);
-
-                if(seize) Release(EventOrder.waitForConsole);
-                Wait(1);
-            } while(true);
-        }
-
+        /**
+         * @brief Current production setter.
+         * @param p         New production value.
+         */
         void setProduction(double p) { mproduction = p;}
+        /**
+         * @brief Current production getter.
+         * @returns Current production.
+         */
         double getProduction() { return mproduction; }
 
     private:
-        std::string mname;
-        double mproduction;
-        Callback moutput;
-
-        long id;
-        long& getCnt() { static long i = 1; return i; }
+        std::string mname; /**< Name of source. */
+        double mproduction; /**< Current production. */
+        Callback moutput; /**< Output callback function. */
 };
 
+/**
+ * @brief Transaction of pipe.
+ */
 class Transfer: public Process {
     public:
+        /**
+         * @brief Constructor.
+         * @param amount        Amount.
+         * @param output        Callback.
+         */
         Transfer(double amount, Callback output):
             mamount(amount), moutput(output) {
             #ifdef TRANSFER_LOG
@@ -49,45 +61,51 @@ class Transfer: public Process {
             #endif
         }
 
-        void Behavior() {
-            bool seize = (Time >= EventOrder.t);
-            if(seize) {
-                Seize(EventOrder.waitForConsole);
-            }
-            #ifdef TRANSFER_LOG
-                std::cerr << Time << ") Transfer: transferred " << mamount << ".\n";
-            #endif
-            moutput(mamount);
-            if(seize) {
-                Release(EventOrder.waitForConsole);
-            }
-        }
+        /**
+         * @brief Overriden function, called through event in calendar.
+         */
+        void Behavior();
+
     private:
-        double mamount;
-        Callback moutput;
+        double mamount; /**< Amount of oil. */
+        Callback moutput; /**< Output callback. */
 };
 
+/**
+ * @brief Pipe class. Delayed connection.
+ */
 class Pipe {
     public:
+        /**
+         * @brief Constructor.
+         * @param name          Name (for printing).
+         * @param maximum       Maximum.
+         * @param delay         Delay.
+         * @param output        Callback.
+         */
         Pipe(std::string name, double maximum, double delay, Callback output=[](double){ std::cerr << "Output not set!\n"; }):
             mname(name), il(maximum), d(delay), moutput(output) {}
-        void Send(double amount) {
-            amount = f.Check(amount);
-            PlanSending(amount, Time);
 
-            if(sending.count(Time + d) == 0) {
-                amount = 0;
-            }
-
-            #ifdef PIPES_LOG
-                std::cerr << Time << ") Pipe " << mname << ": Sending " << sending[Time+d] << ".\n";
-            #endif
-            (new Transfer(sending[Time+d], getOutput()))->Activate(Time + d);
-
-        }
+        /**
+         * @brief Sends amount through pipe.
+         * @param amount        Amount to send.
+         */
+        void Send(double);
+        /**
+         * @brief Input getter.
+         * @returns Input callback.
+         */
         Callback getInput() { return [this](double amount){ this->Send(amount);}; }
-        void setOutput(Callback output) { moutput = output; }
 
+        /**
+         * @brief Output setter.
+         * @param output        New output.
+         */
+        void setOutput(Callback output) { moutput = output; }
+        /**
+         * @brief Output getter.
+         * @returns Output callback.
+         */
         Callback getOutput() {
             return [this](double amount){
                 sending.erase(Time);
@@ -95,127 +113,114 @@ class Pipe {
             };
         }
 
+        /** @brief Breaks the pipe. */
         void Break() { f.Set(); }
+        /** @brief Fixes broken pipe. */
         void Fix() { f.Reset(); }
+        /** @brief Broken indicator. */
         bool IsBroken() { return f.IsSet(); }
 
-        std::map<double,double> getCurrentFlow() {
-            std::map<double,double> clone;
-            for(int i = Time; i < Time+d; i++) {
-                double val = (sending.count(i) > 0) ? sending[i] : 0;
-                clone.insert( std::make_pair(i, val) );
-            }
-            return clone;
-        }
-
-        void setSending(std::map<double,double> s) {
-            sending = s;
-        }
+        /**
+         * @brief Current flow getter.
+         * @returns Map of time and amount coming.
+         */
+        std::map<double,double> getCurrentFlow();
+        /**
+         * @brief Plan setter. Used during the initialization.
+         * @param s         New map of times and amount.
+         */
+        void setSending(std::map<double,double> s) { sending = s; }
 
     protected:
-        void PlanSending(double amount, double t) {
-            if(amount == 0) return;
-            double sum = 0;
-            for(int i = t; i <= (t+d); i++) {
-                if(sending.count(i)) sum += sending[i];
-            }
-            if((sum+amount) > maxStorage) {
-                amount = maxStorage - sum;
-            }
-            sending[t+d] += il.output(amount);
-            PlanSending(il.rest(amount), t+1);
-        }
-
-        //double output(double amount, double basis=0) { return (amount < (mmaximum-basis))?amount:(mmaximum-basis); }
-        //double rest(double amount, double basis=0) { return (amount < (mmaximum-basis))?0:(amount-mmaximum+basis); }
+        /**
+         * @brief Sending planner.
+         * @param amount        Amount to send.
+         * @param t             Initial time.
+         */
+        void PlanSending(double, double);
 
     private:
-        std::string mname;
-        InputLimiter il;
-        double d;
-        Callback moutput;
+        std::string mname; /**< Name. */
+        InputLimiter il; /**< Limitter. */
+        double d; /**< Delay. */
+        Callback moutput; /**< Output callback. */
 
-        double maxStorage = 100;
-        std::map<double, double> sending;
+        double maxStorage = 100; /**< Maximal storage. */
+        std::map<double, double> sending; /**< Plan for sending. */
 
-        Flagger f;
+        Flagger f; /**< Broken indicator. */
 };
 
-
+/**
+ * @brief Status of pipeline.
+ */
 struct PipelineStatus {
-    std::string name;
-    std::map<double,double> delivery;
-    double production;
-    double maximum;
-    bool broken;
+    std::string name; /**< Name. */
+    std::map<double,double> delivery; /**< Delivery plan.  */
+    double production; /**< Current production. */
+    double maximum; /**< Maximal possible production. */
+    bool broken; /**< Broken flag. */
 
-    void print() {
-        std::string prod = double2str(this->production);
-        if(this->production == this->maximum) prod = red(prod);
-        else if(this->production == 0) prod = red(prod);
-        else prod = green(prod);
-
-        std::cout << bold(this->name);
-        for(int i = this->name.length(); i <= 10; i++) {std::cout << " ";}
-        std::cout << italic("pipeline\t");
-        std::cout << bold(((this->broken)?red("Broken"):green("OK"))) << "\t";
-        std::cout << prod << "/" << double2str(this->maximum) << "\n";
-    }
+    /** @brief Prints brief output. */
+    void print();
 };
 
+/**
+ * @brief Represents pipeline.
+ */
 class OilPipeline {
     public:
-        OilPipeline(std::string name, double maxProduction, double producing, double delay):
-            mname(name), mmaximum(maxProduction), mdelay(delay) {
+        /**
+         * @brief Constructor.
+         * @param name              Name (for printing).
+         * @param maxProduction     Maximum production.
+         * @param producing         Initial producing amount.
+         * @param delay             Delay of deliveries.
+         */
+        OilPipeline(std::string, double, double, double);
 
-            p = new Pipe(mname, mmaximum, mdelay, getOutput());
+        /**
+         * @brief Output callback getter.
+         * @returns Output callback.
+         */
+        Callback getOutput() { return [this](double amount){ this->Output(amount); }; }
 
-            s = new Source(mname, producing, p->getInput());
-            s->Activate();
-
-            std::map<double,double> plan;
-            for(int i = 0; i < delay; i++) {
-                (new Transfer(producing, p->getOutput()))->Activate(Time+i);
-                plan.insert( std::make_pair(Time+i, producing) );
-            }
-            p->setSending(plan);
-        }
-        void Foo(double amount) {
-            #ifdef PIPELINE_LOG
-                std::cerr << Time << ") OilPipeline " << mname << ": Received " << amount << "\n";
-            #endif
-            moutput(amount);
-        }
-        Callback getOutput() { return [this](double amount){ this->Foo(amount); }; }
-
-        bool IsBroken() { return p->IsBroken(); }   // returns true if the refinery is broken
+        /** @brief Broken indicator. */
+        bool IsBroken() { return p->IsBroken(); }
+        /** @brief Breaks pipeline. */
         void Break() { p->Break(); }
+        /** @brief Fixes pipeline. */
         void Fix() { p->Fix(); }
 
+        /**
+         * @brief Output callback setter.
+         * @param output        New output value.
+         */
         void setOutput(Callback output) { moutput = output; }
+        /**
+         * @brief Production setter.
+         * @param production    New production value.
+         */
         void setProduction(double production) { s->setProduction(production); }
 
-        PipelineStatus getStatus() {
-            PipelineStatus ps;
-            ps.name = mname;
-            ps.delivery = p->getCurrentFlow();
-            ps.production = s->getProduction();
-            ps.maximum = mmaximum;
-            ps.broken = p->IsBroken();
-            return ps;
-        }
+        /**
+         * @brief Status getter.
+         * @returns Status of the pipeline.
+         */
+        PipelineStatus getStatus();
         
 
     private:
-        std::string mname;
-        double mmaximum;
-        double mdelay;
-        bool broken = false;
+        std::string mname; /**< Pipeline name. */
+        double mmaximum; /**< Maximum possible flow. */
+        double mdelay; /**< Delay of pipeline. */
 
-        Callback moutput;
+        Callback moutput; /**< Callback output. */
+        /** @brief Output. */
+        void Output(double);
 
-        Pipe* p;
-        Source* s;
+        Pipe* p; /**<  Pipe object. */
+        Source* s; /**< Source object. */
 };
 
 
