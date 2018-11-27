@@ -1,4 +1,13 @@
 
+/**
+ * @file rafinery.cpp
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Rafinery classes definitions.
+ *
+ * This module implements Rafinery class and its relatives.
+ */
+
 #include "rafinery.h"
 
 

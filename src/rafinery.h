@@ -1,3 +1,14 @@
+
+/**
+ * @file rafinery.h
+ * @interface rafinery
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Rafinery classes interface.
+ *
+ * This interface declares Rafinery class and its relatives.
+ */
+
 #ifndef RAFINERY_H
 #define RAFINERY_H
 
@@ -8,6 +19,13 @@
 #include "simlib.h"
 
 #include "tools.h"
+
+
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Rafinery
+ * Rafinery classes.
+ * @{
+ */
 
 /**
  * @brief Status of rafinery.
@@ -126,5 +144,8 @@ class Rafinery{
 
         Productor mproductor; /**< Output productor. */
 };
+
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
 
 #endif // RAFINERY_H

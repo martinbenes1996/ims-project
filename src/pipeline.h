@@ -1,3 +1,14 @@
+
+/**
+ * @file pipeline.h
+ * @interface pipeline
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Pipeline classes interface.
+ *
+ * This interface declares Source, Pipe and Pipeline classes and its relatives.
+ */
+
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
@@ -7,6 +18,12 @@
 #include "simlib.h"
 
 #include "tools.h"
+
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Source
+ * Source class.
+ * @{
+ */
 
 /**
  * @brief Source of oil.
@@ -43,6 +60,13 @@ class Source : public Process {
         double mproduction; /**< Current production. */
         Callback moutput; /**< Output callback function. */
 };
+
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Pipe
+ * Pipe and Transfer class.
+ * @{
+ */
 
 /**
  * @brief Transaction of pipe.
@@ -151,6 +175,13 @@ class Pipe {
         Flagger f; /**< Broken indicator. */
 };
 
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Pipeline
+ * Pipeline class and relatives
+ * @{
+ */
+
 /**
  * @brief Status of pipeline.
  */
@@ -223,5 +254,7 @@ class OilPipeline {
         Source* s; /**< Source object. */
 };
 
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
 
 #endif // PIPELINE_H

@@ -1,3 +1,14 @@
+
+/**
+ * @file central.h
+ * @interface central
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Central classes interface.
+ *
+ * This interface declares Central class and its relatives.
+ */
+
 #ifndef CENTRAL_H
 #define CENTRAL_H
 

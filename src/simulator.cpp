@@ -1,7 +1,19 @@
 
+/**
+ * @file simulator.cpp
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Simulator class definition.
+ *
+ * This module implements Simulator class.
+ */
+
 #include "simulator.h"
 
-struct ConsoleFirst EventOrder;
+
+struct ConsoleFirst EventOrder; /**< Definition of event order. */
+
+
 
 Simulator::Simulator() {
     // first calendar event

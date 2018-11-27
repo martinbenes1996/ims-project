@@ -1,5 +1,16 @@
 
+/**
+ * @file pipeline.cpp
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Pipeline classes definitions.
+ *
+ * This module implements classes Source, Pipe and Pipeline and its relatives.
+ */
+
+
 #include "pipeline.h"
+
 
 void Source::Behavior() {
     do {

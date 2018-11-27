@@ -1,3 +1,14 @@
+
+/**
+ * @file simulator.h
+ * @interface simulator
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Simulator class interface.
+ *
+ * This interface declares Simulator class.
+ */
+
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
@@ -5,6 +16,12 @@
 #include "pipeline.h"
 #include "rafinery.h"
 #include "tools.h"
+
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Simulator
+ * Simulator class.
+ * @{
+ */
 
 /**
  * @brief Class Simulator.
@@ -78,5 +95,7 @@ class Simulator: public Process {
         
 };
 
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
 
 #endif // SIMULATOR

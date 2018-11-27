@@ -1,3 +1,14 @@
+
+/**
+ * @file tools.h
+ * @interface tools
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Tools interface.
+ *
+ * This interface defines various types and functions used in whole projects.
+ */
+
 #ifndef TOOLS_H
 #define TOOLS_H
 
@@ -21,6 +32,13 @@
     //#define TRANSFER_LOG
     //#define RESERVE_LOG
 #endif
+
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Styles
+ * Functions for output styling.
+ * @{
+ */
+
 
 /**
  * @brief Converts input string to red output string.
@@ -99,6 +117,13 @@ inline std::string style(std::string s, int format) {
     return s;
 }
 
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Stringifiers
+ * Functions to manage strings.
+ * @{
+ */
+
 /**
  * @brief Convertor double > string.
  * @param v         Input double.
@@ -129,6 +154,39 @@ inline std::vector<std::string> SplitString(std::string str) {
     return v;
 }
 
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Constants
+ * Definitions of constants.
+ * @{
+ */
+
+
+// constants from documentation
+const double IKL_Ratio = 0.484863281; /**< IKL Ratio. */
+const double Druzba_Ratio = 0.515136718; /**< Druzba Ratio. */
+const double Kralupy_Ratio = 0.379353755; /**< Kralupy Ratio. */
+const double Litvinov_Ratio = 0.620646244; /**< Litvinov Ratio. */
+
+const double IKL_Max = 27.4; /**< IKL Max. */
+const double Druzba_Max = 24.66; /**< Druzba Max. */
+const double Kralupy_Max = 9.04; /**< Kralupy Max. */
+const double Litvinov_Max = 14.79; /**< Litvinov Max. */
+
+const double Fraction_Benzin = 0.19; /**< Fraction of benzin in crude oil. */
+const double Fraction_Naphta = 0.42; /**< Fraction of diesel in crude oil. */
+const double Fraction_Asphalt = 0.13; /**< Fraction of diesel in crude oil. */
+
+const double Numeric_Const = 1.0e-03; /**< Epsilon for double counting. */
+
+
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
+/** @addtogroup Types
+ * Definitions of global types.
+ * @{
+ */
+
 // Callback function typedef
 typedef std::function<void(double)> Callback;
 
@@ -140,8 +198,6 @@ struct ConsoleFirst {
     double t = Time;         /**< Checking, wheather to wait for console or not. */
 };
 extern struct ConsoleFirst EventOrder; /**< Global instance. */
-
-const double Numeric_Const = 1.0e-03; /**< Epsilon for double counting. */
 
 /**
  * @brief Products of rafineries.
@@ -233,21 +289,6 @@ class InputLimiter {
         double mmaximum; /**< Saturation limit. */
 };
 
-// constants from documentation
-const double IKL_Ratio = 0.484863281; /**< IKL Ratio. */
-const double Druzba_Ratio = 0.515136718; /**< Druzba Ratio. */
-const double Kralupy_Ratio = 0.379353755; /**< Kralupy Ratio. */
-const double Litvinov_Ratio = 0.620646244; /**< Litvinov Ratio. */
-
-const double IKL_Max = 27.4; /**< IKL Max. */
-const double Druzba_Max = 24.66; /**< Druzba Max. */
-const double Kralupy_Max = 9.04; /**< Kralupy Max. */
-const double Litvinov_Max = 14.79; /**< Litvinov Max. */
-
-const double Fraction_Benzin = 0.19; /**< Fraction of benzin in crude oil. */
-const double Fraction_Naphta = 0.42; /**< Fraction of diesel in crude oil. */
-const double Fraction_Asphalt = 0.13; /**< Fraction of diesel in crude oil. */
-
 /**
  * @brief Demand for products.
  */
@@ -329,5 +370,8 @@ class Reserve {
         InputLimiter il;   /**< Limiter of input. */
         double mlevel;     /**< Current level. */
 };
+
+/** @}*/
+/* ------------------------------------------------------------------------------------ */
 
 #endif // TOOLS_H

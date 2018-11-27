@@ -1,4 +1,13 @@
 
+/**
+ * @file main.cpp
+ * @authors xbenes49 xpolan09
+ * @date 27th november 2018
+ * @brief Main module.
+ *
+ * This module contains main() function.
+ */
+
 #include "simlib.h"
 
 #include "simulator.h"
