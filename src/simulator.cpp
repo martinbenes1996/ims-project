@@ -21,7 +21,7 @@ Simulator::Simulator() {
     Litvinov->setProductor( getProductor() );
 
     // create reserve
-    #warning WTF! 
+    #warning Ondro, tady by se to melo nepojit, nebo zahodit. 
     CTR = new Reserve("Nelahozeves", 1293.5
         /* sem se zapoji Central[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
     */);

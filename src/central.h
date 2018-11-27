@@ -23,6 +23,7 @@ struct CentOutputRatio {
 
 class Central {
     public:
+    #warning Zdokumentuj si central
         Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr, Demand& d):
             Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr), demand(d)
             {
@@ -153,6 +154,7 @@ class Central {
                 std::cerr << Time << ") Central: Sending " << overflow << " to CTN.\n";
             #endif
             double lostOil;
+            (void)lostOil;
             lostOil = CTR->Send(overflow);
             #ifdef DISTRIBUTE_LOG
                 if(lostOil)
