@@ -214,6 +214,48 @@ class Central {
         }
 
         /**
+         * @brief Counts final products.
+         * @param p        Structure filled with amounts of products.
+         *//*
+        void sellProducts(struct Products& p) {
+            // gets two loads of products
+            if(firstProduct) {
+                prod = p;
+                firstProduct = false;
+                return;
+            }
+            else {
+                prod += p;
+                prod.benzin = normalize(prod.benzin, demand.benzin);
+                prod.naphta = normalize(prod.naphta, demand.naphta);
+                prod.asphalt = normalize(prod.asphalt, demand.asphalt);
+                firstProduct = true;
+            }
+            // then evaluates results
+            std::cerr << Time << ") Products:\n";
+            if(prod.benzin > demand.benzin)
+                std::cerr << "\t" << prod.benzin << " of benzin was produced, " << prod.benzin-demand.benzin << " overproduced.\n";
+            else if(prod.benzin < demand.benzin)
+                std::cerr << "\t" << prod.benzin << " of benzin was produced, " << demand.benzin-prod.benzin << " was imported.\n";
+            else
+                std::cerr << "\t" << prod.benzin << " of benzin was produced, which exactly covered demand.\n";
+
+            if(prod.naphta > demand.naphta)
+                std::cerr << "\t" << prod.naphta << " of naphta was produced, " << prod.naphta-demand.naphta << " overproduced.\n";
+            else if(prod.benzin < demand.benzin)
+                std::cerr << "\t" << prod.naphta << " of naphta was produced, " << demand.naphta-prod.naphta << " was imported.\n";
+            else
+                std::cerr << "\t" << prod.naphta << " of naphta was produced, which exactly covered demand.\n";
+
+            if(prod.asphalt > demand.asphalt)
+                std::cerr << "\t" << prod.asphalt << " of asphalt was produced, " << prod.asphalt-demand.asphalt << " overproduced.\n";
+            else if(prod.benzin < demand.benzin)
+                std::cerr << "\t" << prod.asphalt << " of asphalt was produced, " << demand.asphalt-prod.asphalt << " was imported.\n";
+            else
+                std::cerr << "\t" << prod.asphalt << " of asphalt was produced, which exactly covered demand.\n";
+        }*/
+
+        /**
          * @brief Input callback getter.
          */
         Callback getInput() { return [this](double amount){this->Enter(amount);}; }
@@ -236,6 +278,23 @@ class Central {
             double maximum = (b>n)?b:n;
             return (maximum>a)?maximum:a;
         }
+        /**
+         * @brief Counts absolute value of two numbers.
+         * @param number        Number.
+         * @returns Not a negative number.
+         */
+        double absolutni(double number) {return (number>=0.0)?number:-number;}
+        /**
+         * @brief If there is just a small difference between two numbers, it is neglected.
+         * @param normalized        Number that is being changed.
+         * @param normalizing       Target value.
+         * @returns "normalized" number if the difference is too big, "normalizing" number if the difference is small enough.
+         */
+        double normalize(double normalized, double normalizing) {
+            if(absolutni(normalized-normalizing)<Numeric_Const)
+                normalized = normalizing;
+            return normalized;
+        }
         /**< Broken flag. */
         struct CentInputRatio input;        /**< Current ratio of input - negotiate with OilPipelines. */
         struct CentOutputRatio output;      /**< Current ratio of output - negotiate with Rafinery. */
@@ -248,7 +307,9 @@ class Central {
         Pipe* LitPipe;                      /**< Oil for Litvinov is sent via this pipe. */
         Reserve* CTR;                       /**< Reserve of oil. */
         struct Demand& demand;              /**< Current demand set by simulator. */
+        //struct Products& prod;              /**< Current amount of produced materials. */
         bool firstDelivery = true;          /**< First delivery of this day. */
+        //bool firstProduct = true;           /**< First product of this day. */
         double oilToday = 0;                /**< Oil received today so far. */
         double demandOil = 0;               /**< Demand of oil for today. */
 };

@@ -23,17 +23,17 @@ Simulator::Simulator() {
     Druzba = new OilPipeline("Druzba", 24.66, 10.55, 3);
     IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
     // create rafineries
-    Kralupy = new Rafinery("Kralupy", 9.04, 1);
-    Litvinov = new Rafinery("Litvinov", 14.79, 1);
+    Kralupy = new Rafinery("Kralupy", 9.04, 0/*1*/);
+    Litvinov = new Rafinery("Litvinov", 14.79, 0/*1*/);
     // create Litvinov pipe
-    Cent_Litvinov_Pipe = new Pipe("Centre_Litvinov", 10/*change*/, 1, Litvinov->getInput());
+    Cent_Litvinov_Pipe = new Pipe("Centre_Litvinov", 20, 1, Litvinov->getInput());
 
     // send production of rafineries
     Kralupy->setProductor( getProductor() );
     Litvinov->setProductor( getProductor() );
 
     // create reserve
-    #warning Ondro, tady by se to melo nepojit, nebo zahodit. 
+    #warning Ondro, tady by se to melo nepojit, nebo zahodit.
     CTR = new Reserve("Nelahozeves", 1293.5
         /* sem se zapoji Central[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
     */);
@@ -107,13 +107,13 @@ void Simulator::TerminalLoop() {
                 } else {
                     invalid = true;
                 }
-            
+
             // demand
             } else if(split[0] == "demand"
                    || split[0] == "d") {
                 newinput = true;
                 // print all request values
-                if(split.size() == 1) { 
+                if(split.size() == 1) {
                     std::cout << bold("Current demand:\n");
                     std::cout << italic("- benzin: ") << demand.benzin << "\n";
                     std::cout << italic("- naphta: ") << demand.naphta << "\n";
@@ -123,31 +123,31 @@ void Simulator::TerminalLoop() {
                        || split[1] == "natural"
                        || split[1] == "b") {
                     // print benzin request value
-                    if(split.size() == 2) {         
+                    if(split.size() == 2) {
                         std::cout << italic("Benzin demand: ") << demand.benzin << "\n\n";
                     // set benzin request value
-                    } else if(split.size() == 3) {  
+                    } else if(split.size() == 3) {
                         demand.benzin = std::stod(split[2]);
                         std::cerr << italic("New benzin value") << " is " << demand.benzin << "\n\n";
                     // error
-                    } else {                        
+                    } else {
                         invalid = true;
                     }
                 // naphta
-                } else if(split[1] == "naphta" 
+                } else if(split[1] == "naphta"
                        || split[1] == "nafta"
                        || split[1] == "n"
-                       || split[1] == "diesel" 
+                       || split[1] == "diesel"
                        || split[1] == "d") {
                     // print naphta request value
-                    if(split.size() == 2) {         
+                    if(split.size() == 2) {
                             std::cout << italic("Naphta demand: ") << demand.naphta << "\n\n";
                     // set naphta request value
-                    } else if(split.size() == 3) {  
+                    } else if(split.size() == 3) {
                         demand.naphta = std::stod(split[2]);
                         std::cerr << italic("New naphta value") << " is " << demand.naphta << "\n\n";
                     // error
-                    } else {                        
+                    } else {
                         std::cerr << "Invalid input.\n";
                         invalid = true;
                     }
@@ -156,14 +156,14 @@ void Simulator::TerminalLoop() {
                        || split[1] == "asfalt"
                        || split[1] == "a") {
                     // print asphalt request value
-                    if(split.size() == 2) {         
+                    if(split.size() == 2) {
                         std::cout << italic("Asphalt demand: ") << demand.asphalt << "\n\n";
                     // set asphalt request value
-                    } else if(split.size() == 3) {  
+                    } else if(split.size() == 3) {
                         demand.asphalt = std::stod(split[2]);
                         std::cerr << italic("New asphalt value") << " is " << demand.asphalt << "\n\n";
                     // error
-                    } else {                        
+                    } else {
                         invalid = true;
                     }
                 // error
