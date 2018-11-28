@@ -25,18 +25,18 @@
 
 /**
  * @brief Class Simulator.
- * 
+ *
  * Simulator instatiates main parts of system, connects them and hold them. It also implements terminal.
  */
 class Simulator: public Process {
     public:
-        
+
         /**
          * @brief Constructor. Instatiates parts of system and connects them.
          */
         Simulator();
 
-        
+
         /**
          * @brief Handler of products from rafineries.
          */
@@ -46,15 +46,18 @@ class Simulator: public Process {
          */
         Productor getProductor() { return [this](Products p){ return this->AcquireProducts(p); }; }
         void ResolveDayDemand() {
-            double benzin = mproducts.benzin - demand.benzin;
-            double naphta = mproducts.naphta - demand.naphta;
-            double asphalt = mproducts.asphalt - demand.asphalt;
+            double benzin = normalize(mproducts.benzin, demand.benzin) - demand.benzin;
+            double naphta = normalize(mproducts.naphta, demand.naphta) - demand.naphta;
+            double asphalt = normalize(mproducts.asphalt, demand.asphalt) - demand.asphalt;
+            double oilNeed = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
             std::string benzinS = double2str(benzin), naphtaS = double2str(naphta), asphaltS = double2str(asphalt);
             benzinS = (benzin < 0) ? red(benzinS) : ((benzin > 0) ? green(benzinS) : benzinS );
             naphtaS = (naphta < 0) ? red(naphtaS) : ((naphta > 0) ? green(naphtaS) : naphtaS );
             asphaltS = (asphalt < 0) ? red(asphaltS) : ((asphalt > 0) ? green(asphaltS) : asphaltS );
-            
+
             std::cout << bold("Demand satisfaction:\n");
+            if(oilNeed>((Kralupy->IsBroken())?0:Kralupy_Max) + ((Litvinov->IsBroken())?0:Litvinov_Max))
+                std::cout << red("Demand is too high and cannot be satisfied with current refineries!\n");
             std::cout << italic("\t- benzin\t") << benzinS << "\n";
             std::cout << italic("\t- naphta\t") << naphtaS << "\n";
             std::cout << italic("\t- asphalt\t") << asphaltS << "\n";
@@ -74,6 +77,34 @@ class Simulator: public Process {
 
 
     private:
+        /**
+         * @brief Counts absolute value of two numbers.
+         * @param number        Number.
+         * @returns Not a negative number.
+         */
+        double absolutni(double number) {return (number>=0.0)?number:-number;}
+        /**
+         * @brief If there is just a small difference between two numbers, it is neglected.
+         * @param normalized        Number that is being changed.
+         * @param normalizing       Target value.
+         * @returns "normalized" number if the difference is too big, "normalizing" number if the difference is small enough.
+         */
+        double normalize(double normalized, double normalizing) {
+            if(absolutni(normalized-normalizing)<Numeric_Const)
+                normalized = normalizing;
+            return normalized;
+        }
+        /**
+         * @brief Returns the maximum of three numbers.
+         * @param b        First number.
+         * @param n        Second number.
+         * @param a        Third number.
+         * @returns The maximal number.
+         */
+        double max_3(double b, double n, double a) {
+            double maximum = (b>n)?b:n;
+            return (maximum>a)?maximum:a;
+        }
         // parts of system
         // pipelines
         OilPipeline* Druzba; /**< Druzba. Connected to Central. */
@@ -92,7 +123,7 @@ class Simulator: public Process {
         Demand demand; /**< Current demand. */
         // outputs
         Products mproducts; /**< Current production. */
-        
+
 };
 
 /** @}*/
