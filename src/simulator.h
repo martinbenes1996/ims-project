@@ -46,9 +46,9 @@ class Simulator: public Process {
          */
         Productor getProductor() { return [this](Products p){ return this->AcquireProducts(p); }; }
         void ResolveDayDemand() {
-            double benzin = normalize(mproducts.benzin, demand.benzin) - (demand.benzin - import.benzin);
-            double naphta = normalize(mproducts.naphta, demand.naphta) - (demand.naphta - import.naphta);
-            double asphalt = normalize(mproducts.asphalt, demand.asphalt) - (demand.asphalt - import.asphalt);
+            double benzin = normalize(mproducts.benzin, demand.benzin - import.benzin) - (demand.benzin - import.benzin);
+            double naphta = normalize(mproducts.naphta, demand.naphta - import.naphta) - (demand.naphta - import.naphta);
+            double asphalt = normalize(mproducts.asphalt, demand.asphalt - import.asphalt) - (demand.asphalt - import.asphalt);
             std::string benzinS = double2str(benzin), naphtaS = double2str(naphta), asphaltS = double2str(asphalt);
             benzinS = (benzin < 0) ? red(benzinS) : ((benzin > 0) ? green(benzinS) : benzinS );
             naphtaS = (naphta < 0) ? red(naphtaS) : ((naphta > 0) ? green(naphtaS) : naphtaS );
