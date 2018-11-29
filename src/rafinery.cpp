@@ -13,18 +13,18 @@
 
 void RafineryStatus::print() {
     // production to string
-    double val = (this->production.count(Time) > 0) ? this->production[Time] : 0;
+    double val = (production.count(Time) > 0) ? production[Time] : 0;
     if(val < 0.001) val = 0;
     std::string prod = double2str(val);
-    if(val == this->maximum) prod = red(prod);
+    if(val == maximum) prod = red(prod);
     else if(val == 0) prod = red(prod);
     else prod = green(prod);
     // print
-    std::cout << bold(this->name);
-    for(int i = this->name.length(); i <= 10; i++) {std::cout << " ";}
+    std::cout << bold(name);
+    for(int i = name.length(); i <= 10; i++) {std::cout << " ";}
     std::cout << italic("rafinery\t");
-    std::cout << bold(((this->broken)?red("Broken"):green("OK"))) << "\t";
-    std::cout << prod << "/" << double2str(this->maximum) << "\n";
+    std::cout << bold(((broken)?red("Broken"):green("OK"))) << "\t";
+    std::cout << prod << "/" << double2str(maximum) << "\n";
 }
 
 

@@ -23,8 +23,8 @@ Simulator::Simulator() {
     Druzba = new OilPipeline("Druzba", 24.66, 10.55, 3);
     IKL = new OilPipeline("IKL", 27.4, 9.93, 2);
     // create rafineries
-    Kralupy = new Rafinery("Kralupy", 9.04, 0/*1*/);
-    Litvinov = new Rafinery("Litvinov", 14.79, 0/*1*/);
+    Kralupy = new Rafinery("Kralupy", 9.04, 0);
+    Litvinov = new Rafinery("Litvinov", 14.79, 0);
     // create Litvinov pipe
     Cent_Litvinov_Pipe = new Pipe("Centre_Litvinov", 20, 1, Litvinov->getInput());
 
@@ -33,13 +33,10 @@ Simulator::Simulator() {
     Litvinov->setProductor( getProductor() );
 
     // create reserve
-    #warning Ondro, tady by se to melo nepojit, nebo zahodit.
-    CTR = new Reserve("Nelahozeves", 1293.5
-        /* sem se zapoji Central[](double amount){ std::cerr << Time << ") ControlCenter: Receive " << amount << ".\n";}
-    */);
+    CTR = new Reserve("Nelahozeves", 1293.5);
 
     // create central
-    CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR, demand);
+    CentralaKralupy = new Central(Kralupy, Litvinov, Druzba, IKL, Cent_Litvinov_Pipe, CTR, demand, import);
     // connect pipelines to central
     Druzba->setOutput([this](double amount) {
         #ifdef CENTRAL_LOG
@@ -333,6 +330,67 @@ void Simulator::TerminalLoop() {
                     kralupystat.print();
                     litvinovstat.print();
                     std::cout << "\n";
+                }
+            
+            // import
+            } else if(split[0] == "import" || split[0] == "i") {
+                newinput = true;
+                if(split.size() == 1) {
+                    std::cout << bold("Current import:\n");
+                    std::cout << italic("- benzin: ") << import.benzin << "\n";
+                    std::cout << italic("- naphta: ") << import.naphta << "\n";
+                    std::cout << italic("- asphalt: ") << import.asphalt << "\n\n";
+                // benzin
+                } else if(split[1] == "benzin"
+                       || split[1] == "natural"
+                       || split[1] == "b") {
+                    // print benzin request value
+                    if(split.size() == 2) {
+                        std::cout << italic("Benzin import: ") << import.benzin << "\n\n";
+                    // set benzin import value
+                    } else if(split.size() == 3) {
+                        import.benzin = std::stod(split[2]);
+                        std::cerr << italic("New benzin import value") << " is " << import.benzin << "\n\n";
+                    // error
+                    } else {
+                        invalid = true;
+                    }
+                // naphta
+                } else if(split[1] == "naphta"
+                       || split[1] == "nafta"
+                       || split[1] == "n"
+                       || split[1] == "diesel"
+                       || split[1] == "d") {
+                    // print naphta import value
+                    if(split.size() == 2) {
+                            std::cout << italic("Naphta import: ") << import.naphta << "\n\n";
+                    // set naphta import value
+                    } else if(split.size() == 3) {
+                        import.naphta = std::stod(split[2]);
+                        std::cerr << italic("New naphta import value") << " is " << import.naphta << "\n\n";
+                    // error
+                    } else {
+                        std::cerr << "Invalid input.\n";
+                        invalid = true;
+                    }
+                // asphalt
+                } else if(split[1] == "asphalt"
+                       || split[1] == "asfalt"
+                       || split[1] == "a") {
+                    // print asphalt import value
+                    if(split.size() == 2) {
+                        std::cout << italic("Asphalt import: ") << import.asphalt << "\n\n";
+                    // set asphalt request value
+                    } else if(split.size() == 3) {
+                        import.asphalt = std::stod(split[2]);
+                        std::cerr << italic("New asphalt value") << " is " << import.asphalt << "\n\n";
+                    // error
+                    } else {
+                        invalid = true;
+                    }
+                // error
+                } else {
+                    invalid = true;
                 }
 
             // exit

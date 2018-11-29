@@ -46,23 +46,36 @@ class Simulator: public Process {
          */
         Productor getProductor() { return [this](Products p){ return this->AcquireProducts(p); }; }
         void ResolveDayDemand() {
-            double benzin = normalize(mproducts.benzin, demand.benzin) - demand.benzin;
-            double naphta = normalize(mproducts.naphta, demand.naphta) - demand.naphta;
-            double asphalt = normalize(mproducts.asphalt, demand.asphalt) - demand.asphalt;
-            double oilNeed = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
+            double benzin = normalize(mproducts.benzin, demand.benzin) - (demand.benzin - import.benzin);
+            double naphta = normalize(mproducts.naphta, demand.naphta) - (demand.naphta - import.naphta);
+            double asphalt = normalize(mproducts.asphalt, demand.asphalt) - (demand.asphalt - import.asphalt);
             std::string benzinS = double2str(benzin), naphtaS = double2str(naphta), asphaltS = double2str(asphalt);
             benzinS = (benzin < 0) ? red(benzinS) : ((benzin > 0) ? green(benzinS) : benzinS );
             naphtaS = (naphta < 0) ? red(naphtaS) : ((naphta > 0) ? green(naphtaS) : naphtaS );
             asphaltS = (asphalt < 0) ? red(asphaltS) : ((asphalt > 0) ? green(asphaltS) : asphaltS );
 
+            double oilNeed = max_3((demand.benzin-import.benzin)/Fraction_Benzin, (demand.naphta-import.naphta)/Fraction_Naphta, (demand.asphalt-import.asphalt)/Fraction_Asphalt);
+            std::cout << oilNeed << " of oil needed.\n";
             std::cout << bold("Demand satisfaction:\n");
-            if(oilNeed>((Kralupy->IsBroken())?0:Kralupy_Max) + ((Litvinov->IsBroken())?0:Litvinov_Max))
+
+            if(oilNeed>((Kralupy->IsBroken())?0:Kralupy_Max) + ((Litvinov->IsBroken())?0:Litvinov_Max)) 
                 std::cout << red("Demand is too high and cannot be satisfied with current refineries!\n");
+
             std::cout << italic("\t- benzin\t") << benzinS << "\n";
             std::cout << italic("\t- naphta\t") << naphtaS << "\n";
             std::cout << italic("\t- asphalt\t") << asphaltS << "\n";
-            std::cout << "\n";
             mproducts = Products();
+
+            ReserveStatus rs = CTR->getStatus();
+            std::cout << bold("Reserve ") << bold(rs.name) << bold(" balance:\n");
+            std::cout << rs.level << "/" << rs.capacity << "\n";
+            if(rs.requested != -1) {
+                std::cout << "Taken " << red( double2str(rs.given) ) << " [" << italic( double2str(rs.requested) ) << " requested]\n";
+            }
+            if(rs.added != -1) {
+                std::cout << "Added " << green( double2str(rs.added) ) << " [" << italic( double2str(rs.returned) ) << " requested]\n";
+            }
+            std::cout << "\n";
         }
 
 
@@ -90,7 +103,7 @@ class Simulator: public Process {
          * @returns "normalized" number if the difference is too big, "normalizing" number if the difference is small enough.
          */
         double normalize(double normalized, double normalizing) {
-            if(absolutni(normalized-normalizing)<Numeric_Const)
+            if(absolutni(normalized-normalizing)<Numeric_Const || absolutni(normalized-normalizing)>-Numeric_Const)
                 normalized = normalizing;
             return normalized;
         }
@@ -121,6 +134,7 @@ class Simulator: public Process {
         // inputs and output
         // inputs
         Demand demand; /**< Current demand. */
+        Import import; /**< Current import. */
         // outputs
         Products mproducts; /**< Current production. */
 

@@ -293,9 +293,33 @@ class InputLimiter {
  * @brief Demand for products.
  */
 struct Demand {
-    double benzin = 4.38; /**< Demand for benzin. */
-    double naphta = 12.96; /**< Demand for diesel. */
-    double asphalt = 1.21; /**< Demand for asphalt. */
+    Demand(double b = 4.38, double n = 12.96, double a = 1.21):
+        benzin(b), naphta(n), asphalt(a) {}
+    double benzin;  /**< Demand for benzin. */
+    double naphta;  /**< Demand for diesel. */
+    double asphalt; /**< Demand for asphalt. */
+};
+
+// Import definition.
+struct Import: public Demand {
+    Import():
+        Demand(1.09, 5.45, 0.29) {}
+};
+
+struct ReserveStatus {
+    ReserveStatus(std::string n, double lvl, double max):
+        name(n), capacity(max), level(lvl), t(Time),
+        requested(0), given(0), added(0), returned(0) {}
+    std::string name;
+    double capacity;
+    double level;
+    double t;
+
+    double requested;
+    double given;
+
+    double added;
+    double returned;
 };
 
 /**
@@ -309,7 +333,8 @@ class Reserve {
          * @param capacity  Limit.
          */
         Reserve(std::string name, double capacity):
-            mname(name), il(capacity), mlevel(capacity) {}
+            mname(name), il(capacity), mlevel(capacity),
+            stat( ReserveStatus(name, capacity, capacity) ) {}
 
         /**
          * @brief Sends amount to reserve.
@@ -320,6 +345,10 @@ class Reserve {
             #ifdef RESERVE_LOG
                 std::cerr << Time << ") Reserve " << mname << ": Received " << amount <<".\n";
             #endif
+            checkStat();
+
+            stat.added = il.output(amount);
+            stat.returned = il.rest(amount);
             mlevel += il.output(amount);
             return il.rest(amount);
         }
@@ -330,16 +359,23 @@ class Reserve {
          * @returns Real delivered amount.
          */
         double Request(double amount) {
+            checkStat();
             // ignore double inaccuracy
             if(amount<=Numeric_Const) return 0;
+
+            stat.requested = amount;
             // send only part
             if(mlevel < amount) {
                 amount = mlevel;
                 mlevel = 0;
+                stat.given = amount;
+                stat.level = mlevel;
                 return amount;
             // enough of reserve - send all
             } else {
                 mlevel -= amount;
+                stat.given = amount;
+                stat.level = mlevel;
                 return amount;
             }
         }
@@ -365,11 +401,25 @@ class Reserve {
             return -miss;
         }
 
+        ReserveStatus getStatus() {
+            if(stat.t + 1 != Time) checkStat();
+            return stat;
+        }
+
     private:
         std::string mname; /**< Name. */
         InputLimiter il;   /**< Limiter of input. */
         double mlevel;     /**< Current level. */
+
+        ReserveStatus stat;
+        void checkStat() {
+            if(stat.t == Time) return;
+            stat = ReserveStatus(mname, mlevel, il.getMaximum());
+        }
 };
+
+inline double cropTo0(double v) { return (v < 0) ? 0 : v; }
+inline double saturateTo0(double v) { return (v > 0) ? 0 : v;}
 
 /** @}*/
 /* ------------------------------------------------------------------------------------ */

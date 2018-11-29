@@ -46,8 +46,8 @@ class Central {
          * @param ctr                   Nelahozeves reserve.
          * @param d                     Current demand structure.
          */
-        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr, Demand& d):
-            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr), demand(d)
+        Central(Rafinery *kr, Rafinery *lit, OilPipeline* druzba, OilPipeline* ikl, Pipe* Cent_Litvinov_Pipe, Reserve* ctr, Demand& d, Import& i):
+            Kralupy(kr), Litvinov(lit), Druzba(druzba), IKL(ikl), LitPipe(Cent_Litvinov_Pipe), CTR(ctr), demand(d), import(i)
             {
                 koutput = Kralupy->getInput();
                 loutput = LitPipe->getInput();
@@ -102,8 +102,20 @@ class Central {
             else {
                 oilToday += amount;
                 firstDelivery = true;
+                // substract import
+                Demand productionDemand;
+                productionDemand.benzin = cropTo0(demand.benzin - import.benzin);
+                productionDemand.naphta = cropTo0(demand.naphta - import.naphta);
+                productionDemand.asphalt = cropTo0(demand.asphalt - import.asphalt);
+                // import exceeds demand
+                importOver.benzin = cropTo0(import.benzin - demand.benzin);
+                importOver.naphta = cropTo0(import.naphta - demand.naphta);
+                importOver.asphalt = cropTo0(import.asphalt - demand.asphalt);
+
                 // count demand for today
-                demandOil = max_3(demand.benzin/Fraction_Benzin, demand.naphta/Fraction_Naphta, demand.asphalt/Fraction_Asphalt);
+                demandOil = max_3(  productionDemand.benzin/Fraction_Benzin,
+                                    productionDemand.naphta/Fraction_Naphta,
+                                    productionDemand.asphalt/Fraction_Asphalt );
             }
             // correction of oil amount to fit demand - DEMAND FIRST, RESERVE SECOND
             short KralupyBreakFlag;     /**< 0 when broken, 1 when ok. */
@@ -224,6 +236,8 @@ class Central {
          */
         void setDemand(struct Demand& d) { demand = d; }
 
+        const Import& getImportOver() { return importOver; }
+
     private:
         /**
          * @brief Returns the maximum of three numbers.
@@ -248,6 +262,8 @@ class Central {
         Pipe* LitPipe;                      /**< Oil for Litvinov is sent via this pipe. */
         Reserve* CTR;                       /**< Reserve of oil. */
         struct Demand& demand;              /**< Current demand set by simulator. */
+        struct Import& import;              /**< Current import set by simulator. */
+        struct Import importOver;           /**< Import exceeding demand. */
         bool firstDelivery = true;          /**< First delivery of this day. */
         double oilToday = 0;                /**< Oil received today so far. */
         double demandOil = 0;               /**< Demand of oil for today. */
