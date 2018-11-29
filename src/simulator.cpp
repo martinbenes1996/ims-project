@@ -118,8 +118,14 @@ void Simulator::TerminalLoop() {
                     std::cout << italic("- benzin: ") << demand.benzin << "\n";
                     std::cout << italic("- naphta: ") << demand.naphta << "\n";
                     std::cout << italic("- asphalt: ") << demand.asphalt << "\n";
-                    double oilNeed = max_3((demand.benzin-import.benzin)/Fraction_Benzin, (demand.naphta-import.naphta)/Fraction_Naphta, (demand.asphalt-import.asphalt)/Fraction_Asphalt);
-                    std::cout << oilNeed << " of oil needed.\n\n";
+                    const Demand& productionDemand = CentralaKralupy->getProductionDemand();
+                    const Import& importOver = CentralaKralupy->getImportOver();
+                    double oilNeed = max_3((productionDemand.benzin-importOver.benzin)/Fraction_Benzin, (productionDemand.naphta-importOver.naphta)/Fraction_Naphta, (productionDemand.asphalt-importOver.asphalt)/Fraction_Asphalt);
+                    std::cout << cropTo0(oilNeed) << " of oil needed.\n";
+                    int satisfy = (CTR->Level()/oilNeed);
+                    std::string satisfyS = (satisfy < 90) ? red( double2str(satisfy) ) : green( double2str(satisfy) );
+                    if(oilNeed < 0) satisfyS = green("eternity");
+                    std::cout << "Current demand can be (at least partially) satisfied for " << satisfyS << "\n\n";
                 // benzin
                 } else if(split[1] == "benzin"
                        || split[1] == "natural"
@@ -172,6 +178,7 @@ void Simulator::TerminalLoop() {
                 } else {
                     invalid = true;
                 }
+                CentralaKralupy->recountImport();
 
             // break / fix
             } else if(split[0] == "break"
@@ -410,6 +417,7 @@ void Simulator::TerminalLoop() {
                 } else {
                     invalid = true;
                 }
+                CentralaKralupy->recountImport();
 
             // exit
             } else if(split[0] == "quit" || split[0] == "exit" || split[0] == "q") {

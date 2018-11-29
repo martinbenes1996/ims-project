@@ -101,22 +101,9 @@ class Central {
             }
             else {
                 CTR->clearStatus();
-
                 oilToday += amount;
                 firstDelivery = true;
-                // substract import
-                productionDemand.benzin = cropTo0(demand.benzin - import.benzin);
-                productionDemand.naphta = cropTo0(demand.naphta - import.naphta);
-                productionDemand.asphalt = cropTo0(demand.asphalt - import.asphalt);
-                //std::cerr << demand.benzin << "\t" << demand.naphta << "\t" << demand.asphalt << "\n";
-                //std::cerr << import.benzin << "\t" << import.naphta << "\t" << import.asphalt << "\n";
-                //std::cerr << productionDemand.benzin << "\t" << productionDemand.naphta << "\t" << productionDemand.asphalt << "\n";
-                // import exceeds demand
-                importOver.benzin = cropTo0(import.benzin - demand.benzin);
-                importOver.naphta = cropTo0(import.naphta - demand.naphta);
-                importOver.asphalt = cropTo0(import.asphalt - demand.asphalt);
-                //std::cerr << importOver.benzin << "\t" << importOver.naphta << "\t" << importOver.asphalt << "\n";
-
+                recountImport();
                 // count demand for today
                 demandOil = max_3(  productionDemand.benzin/Fraction_Benzin,
                                     productionDemand.naphta/Fraction_Naphta,
@@ -243,6 +230,15 @@ class Central {
 
         const Import& getImportOver() { return importOver; }
         const Demand& getProductionDemand() { return productionDemand; }
+
+        void recountImport() {
+            productionDemand.benzin = cropTo0(demand.benzin - import.benzin);
+            productionDemand.naphta = cropTo0(demand.naphta - import.naphta);
+            productionDemand.asphalt = cropTo0(demand.asphalt - import.asphalt);
+            importOver.benzin = cropTo0(import.benzin - demand.benzin);
+            importOver.naphta = cropTo0(import.naphta - demand.naphta);
+            importOver.asphalt = cropTo0(import.asphalt - demand.asphalt);
+        }
 
     private:
         /**
