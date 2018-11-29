@@ -100,17 +100,22 @@ class Central {
                 return;                 // wait for second load of oil
             }
             else {
+                CTR->clearStatus();
+
                 oilToday += amount;
                 firstDelivery = true;
                 // substract import
-                Demand productionDemand;
                 productionDemand.benzin = cropTo0(demand.benzin - import.benzin);
                 productionDemand.naphta = cropTo0(demand.naphta - import.naphta);
                 productionDemand.asphalt = cropTo0(demand.asphalt - import.asphalt);
+                //std::cerr << demand.benzin << "\t" << demand.naphta << "\t" << demand.asphalt << "\n";
+                //std::cerr << import.benzin << "\t" << import.naphta << "\t" << import.asphalt << "\n";
+                //std::cerr << productionDemand.benzin << "\t" << productionDemand.naphta << "\t" << productionDemand.asphalt << "\n";
                 // import exceeds demand
                 importOver.benzin = cropTo0(import.benzin - demand.benzin);
                 importOver.naphta = cropTo0(import.naphta - demand.naphta);
                 importOver.asphalt = cropTo0(import.asphalt - demand.asphalt);
+                //std::cerr << importOver.benzin << "\t" << importOver.naphta << "\t" << importOver.asphalt << "\n";
 
                 // count demand for today
                 demandOil = max_3(  productionDemand.benzin/Fraction_Benzin,
@@ -237,6 +242,7 @@ class Central {
         void setDemand(struct Demand& d) { demand = d; }
 
         const Import& getImportOver() { return importOver; }
+        const Demand& getProductionDemand() { return productionDemand; }
 
     private:
         /**
@@ -263,6 +269,7 @@ class Central {
         Reserve* CTR;                       /**< Reserve of oil. */
         struct Demand& demand;              /**< Current demand set by simulator. */
         struct Import& import;              /**< Current import set by simulator. */
+        struct Demand productionDemand;
         struct Import importOver;           /**< Import exceeding demand. */
         bool firstDelivery = true;          /**< First delivery of this day. */
         double oilToday = 0;                /**< Oil received today so far. */

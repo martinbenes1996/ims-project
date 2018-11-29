@@ -190,6 +190,7 @@ struct PipelineStatus {
     std::map<double,double> delivery; /**< Delivery plan.  */
     double production; /**< Current production. */
     double maximum; /**< Maximal possible production. */
+    double delay; /**< Delay of pipeline. */
     bool broken; /**< Broken flag. */
 
     /** @brief Prints brief output. */

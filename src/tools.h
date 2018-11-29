@@ -307,19 +307,29 @@ struct Import: public Demand {
 };
 
 struct ReserveStatus {
-    ReserveStatus(std::string n, double lvl, double max):
-        name(n), capacity(max), level(lvl), t(Time),
+    ReserveStatus(std::string n, double lvl, double max, double min):
+        name(n), capacity(max), level(lvl), minimum(min),
         requested(0), given(0), added(0), returned(0) {}
     std::string name;
     double capacity;
     double level;
-    double t;
+    double minimum;
 
     double requested;
     double given;
 
     double added;
     double returned;
+
+    void print() {
+        std::cout << bold(name);
+        for(int i = name.length(); i <= 13; i++) {std::cout << " ";}
+        std::cout << italic("CTR\t");
+        std::cout << ((level < minimum) ? red(bold("LOW")) : green(bold("OK"))) << "\t";
+        std::string levelS = (level < minimum) ? red(double2str(level)) : green(double2str(level));
+
+        std::cout << levelS << "/" << capacity << "\t" << "minimum " << minimum << "\n";
+    }
 };
 
 /**
@@ -334,7 +344,7 @@ class Reserve {
          */
         Reserve(std::string name, double capacity):
             mname(name), il(capacity), mlevel(capacity),
-            stat( ReserveStatus(name, capacity, capacity) ) {}
+            stat( ReserveStatus(name, capacity, capacity, mmin) ) {}
 
         /**
          * @brief Sends amount to reserve.
@@ -345,7 +355,6 @@ class Reserve {
             #ifdef RESERVE_LOG
                 std::cerr << Time << ") Reserve " << mname << ": Received " << amount <<".\n";
             #endif
-            checkStat();
 
             stat.added = il.output(amount);
             stat.returned = il.rest(amount);
@@ -359,7 +368,6 @@ class Reserve {
          * @returns Real delivered amount.
          */
         double Request(double amount) {
-            checkStat();
             // ignore double inaccuracy
             if(amount<=Numeric_Const) return 0;
 
@@ -396,26 +404,22 @@ class Reserve {
          * @returns 0 if ok, or missing amount.
          */
         double Missing() {
-            double miss = mlevel - 900.0;
+            double miss = mlevel - mmin;
             if(miss >= 0.0) miss = 0.0;
             return -miss;
         }
 
-        ReserveStatus getStatus() {
-            if(stat.t + 1 != Time) checkStat();
-            return stat;
-        }
+        ReserveStatus getStatus() { return stat; }
+
+        void clearStatus() { stat = ReserveStatus(mname, mlevel, il.getMaximum(), mmin); }
 
     private:
         std::string mname; /**< Name. */
         InputLimiter il;   /**< Limiter of input. */
         double mlevel;     /**< Current level. */
+        const double mmin = 900.0;
 
         ReserveStatus stat;
-        void checkStat() {
-            if(stat.t == Time) return;
-            stat = ReserveStatus(mname, mlevel, il.getMaximum());
-        }
 };
 
 inline double cropTo0(double v) { return (v < 0) ? 0 : v; }

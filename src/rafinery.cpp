@@ -13,7 +13,7 @@
 
 void RafineryStatus::print() {
     // production to string
-    double val = (production.count(Time) > 0) ? production[Time] : 0;
+    double val = (production.count(Time-1) > 0) ? production[Time-1] : 0;
     if(val < 0.001) val = 0;
     std::string prod = double2str(val);
     if(val == maximum) prod = red(prod);
@@ -21,7 +21,7 @@ void RafineryStatus::print() {
     else prod = green(prod);
     // print
     std::cout << bold(name);
-    for(int i = name.length(); i <= 10; i++) {std::cout << " ";}
+    for(int i = name.length(); i <= 13; i++) {std::cout << " ";}
     std::cout << italic("rafinery\t");
     std::cout << bold(((broken)?red("Broken"):green("OK"))) << "\t";
     std::cout << prod << "/" << double2str(maximum) << "\n";
@@ -60,7 +60,7 @@ RafineryStatus Rafinery::getStatus() {
 
 std::map<double,double> Rafinery::getProduction() {
     std::map<double,double> clone;
-    for(int i = Time; i < Time+d; i++) {
+    for(int i = Time-1; i < Time+d; i++) {
         double val = (processing.count(i) > 0)? processing[i] : 0;
         clone.insert( std::make_pair(i, val) );
     }

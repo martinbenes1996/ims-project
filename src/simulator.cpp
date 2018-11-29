@@ -69,6 +69,7 @@ void Simulator::TerminalLoop() {
         do {
             // skip, if set
             if(skip > 0) { skip--; break; }
+            else { skipping = false; }
             // initialize indicators
             newinput = false;
             invalid = false;
@@ -101,6 +102,8 @@ void Simulator::TerminalLoop() {
                    || split[0] == "s") {
                 if(split.size() == 2) {
                     skip = std::stoi(split[1]) - 1;
+                    skipping = true;
+                    std::cout << "Skipping " << skip+1 << " days.\n\n";
                 } else {
                     invalid = true;
                 }
@@ -114,7 +117,9 @@ void Simulator::TerminalLoop() {
                     std::cout << bold("Current demand:\n");
                     std::cout << italic("- benzin: ") << demand.benzin << "\n";
                     std::cout << italic("- naphta: ") << demand.naphta << "\n";
-                    std::cout << italic("- asphalt: ") << demand.asphalt << "\n\n";
+                    std::cout << italic("- asphalt: ") << demand.asphalt << "\n";
+                    double oilNeed = max_3((demand.benzin-import.benzin)/Fraction_Benzin, (demand.naphta-import.naphta)/Fraction_Naphta, (demand.asphalt-import.asphalt)/Fraction_Asphalt);
+                    std::cout << oilNeed << " of oil needed.\n\n";
                 // benzin
                 } else if(split[1] == "benzin"
                        || split[1] == "natural"
@@ -282,6 +287,7 @@ void Simulator::TerminalLoop() {
                 PipelineStatus iklstat = IKL->getStatus();
                 RafineryStatus kralupystat = Kralupy->getStatus();
                 RafineryStatus litvinovstat = Litvinov->getStatus();
+                ReserveStatus ctrstat = CTR->getStatus();
                 if(split.size() > 1) {
                     // status druzba
                     if(split[1] == "druzba" || split[1] == "druzhba" || split[1] == "d") {
@@ -319,6 +325,17 @@ void Simulator::TerminalLoop() {
                             }
                         }
                         std::cout << "\n";
+                    // status nelahozeves
+                    } else if(split[1] == "nelahozeves" || split[1] == "ctr") {
+                        ctrstat.print();
+                        if(ctrstat.requested != -1) {
+                            std::cout << "Taken " << red( double2str(ctrstat.given) ) << " [" << italic( double2str(ctrstat.requested) ) << " requested]\n";
+                        }
+                        if(ctrstat.added != -1) {
+                            std::cout << "Added " << green( double2str(ctrstat.added) ) << " [" << italic( double2str(ctrstat.returned) ) << " returned]\n";
+                        }
+                        std::cout << "\n";
+
                     // error
                     } else {
                         invalid = true;
@@ -329,6 +346,7 @@ void Simulator::TerminalLoop() {
                     iklstat.print();
                     kralupystat.print();
                     litvinovstat.print();
+                    ctrstat.print();
                     std::cout << "\n";
                 }
             

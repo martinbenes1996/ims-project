@@ -67,7 +67,7 @@ void Pipe::Send(double amount) {
 std::map<double,double> Pipe::getCurrentFlow() {
     // clone flow
     std::map<double,double> clone;
-    for(int i = Time; i < Time+d; i++) {
+    for(int i = Time-1; i < Time+d-1; i++) {
         double val = (sending.count(i) > 0) ? sending[i] : 0;
         clone.insert( std::make_pair(i, val) );
     }
@@ -94,16 +94,17 @@ void Pipe::PlanSending(double amount, double t) {
 
 void PipelineStatus::print() {
     // production > string
-    std::string prod = double2str(this->production);
-    if(this->production == this->maximum) prod = red(prod);
-    else if(this->production == 0) prod = red(prod);
+    std::string prod = double2str(production);
+    if(production == maximum) prod = red(prod);
+    else if(production == 0) prod = red(prod);
     else prod = green(prod);
     // print
-    std::cout << bold(this->name);
-    for(int i = this->name.length(); i <= 10; i++) {std::cout << " ";}
+    std::cout << bold(name);
+    for(int i = name.length(); i <= 13; i++) {std::cout << " ";}
     std::cout << italic("pipeline\t");
-    std::cout << bold(((this->broken)?red("Broken"):green("OK"))) << "\t";
-    std::cout << prod << "/" << double2str(this->maximum) << "\n";
+    std::cout << bold(((broken)?red("Broken"):green("OK"))) << "\t";
+    std::cout << prod << "/" << double2str(maximum) << "\t";
+    std::cout << double2str(delay) << " days\n";
 }
 
 
@@ -139,6 +140,7 @@ PipelineStatus OilPipeline::getStatus() {
     ps.delivery = p->getCurrentFlow();
     ps.production = s->getProduction();
     ps.maximum = mmaximum;
+    ps.delay = mdelay;
     ps.broken = p->IsBroken();
     return ps;
 }

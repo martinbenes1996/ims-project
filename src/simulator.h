@@ -46,36 +46,30 @@ class Simulator: public Process {
          */
         Productor getProductor() { return [this](Products p){ return this->AcquireProducts(p); }; }
         void ResolveDayDemand() {
-            double benzin = normalize(mproducts.benzin, demand.benzin - import.benzin) - (demand.benzin - import.benzin);
-            double naphta = normalize(mproducts.naphta, demand.naphta - import.naphta) - (demand.naphta - import.naphta);
-            double asphalt = normalize(mproducts.asphalt, demand.asphalt - import.asphalt) - (demand.asphalt - import.asphalt);
+            const Demand& productionDemand = CentralaKralupy->getProductionDemand();
+            const Import& importOver = CentralaKralupy->getImportOver();
+            double benzin = normalize(mproducts.benzin, productionDemand.benzin) - productionDemand.benzin + importOver.benzin;
+            double naphta = normalize(mproducts.naphta, productionDemand.naphta) - productionDemand.naphta + importOver.naphta;
+            double asphalt = normalize(mproducts.asphalt, productionDemand.asphalt) - productionDemand.asphalt + importOver.asphalt;
             std::string benzinS = double2str(benzin), naphtaS = double2str(naphta), asphaltS = double2str(asphalt);
             benzinS = (benzin < 0) ? red(benzinS) : ((benzin > 0) ? green(benzinS) : benzinS );
             naphtaS = (naphta < 0) ? red(naphtaS) : ((naphta > 0) ? green(naphtaS) : naphtaS );
             asphaltS = (asphalt < 0) ? red(asphaltS) : ((asphalt > 0) ? green(asphaltS) : asphaltS );
 
             double oilNeed = max_3((demand.benzin-import.benzin)/Fraction_Benzin, (demand.naphta-import.naphta)/Fraction_Naphta, (demand.asphalt-import.asphalt)/Fraction_Asphalt);
-            std::cout << oilNeed << " of oil needed.\n";
-            std::cout << bold("Demand satisfaction:\n");
+            if(!skipping) std::cout << bold("Demand satisfaction:\n");
 
             if(oilNeed>((Kralupy->IsBroken())?0:Kralupy_Max) + ((Litvinov->IsBroken())?0:Litvinov_Max)) 
-                std::cout << red("Demand is too high and cannot be satisfied with current refineries!\n");
+                if(!skipping) std::cout << red("Demand is too high and cannot be satisfied with current refineries!\n");
 
-            std::cout << italic("\t- benzin\t") << benzinS << "\n";
-            std::cout << italic("\t- naphta\t") << naphtaS << "\n";
-            std::cout << italic("\t- asphalt\t") << asphaltS << "\n";
+            if(!skipping) std::cout << italic("\t- benzin\t") << benzinS << "\n";
+            if(!skipping) std::cout << italic("\t- naphta\t") << naphtaS << "\n";
+            if(!skipping) std::cout << italic("\t- asphalt\t") << asphaltS << "\n";
             mproducts = Products();
 
             ReserveStatus rs = CTR->getStatus();
-            std::cout << bold("Reserve ") << bold(rs.name) << bold(" balance:\n");
-            std::cout << rs.level << "/" << rs.capacity << "\n";
-            if(rs.requested != -1) {
-                std::cout << "Taken " << red( double2str(rs.given) ) << " [" << italic( double2str(rs.requested) ) << " requested]\n";
-            }
-            if(rs.added != -1) {
-                std::cout << "Added " << green( double2str(rs.added) ) << " [" << italic( double2str(rs.returned) ) << " requested]\n";
-            }
-            std::cout << "\n";
+            if(!skipping) std::cout << "CTR " << bold(rs.name) << " balance: " << rs.level << "/" << rs.capacity << "\n";
+            if(!skipping) std::cout << "\n";
         }
 
 
@@ -103,7 +97,8 @@ class Simulator: public Process {
          * @returns "normalized" number if the difference is too big, "normalizing" number if the difference is small enough.
          */
         double normalize(double normalized, double normalizing) {
-            if(absolutni(normalized-normalizing)<Numeric_Const || absolutni(normalized-normalizing)>-Numeric_Const)
+
+            if(absolutni(normalized-normalizing)<Numeric_Const && absolutni(normalized-normalizing)>-Numeric_Const)
                 normalized = normalizing;
             return normalized;
         }
@@ -130,6 +125,7 @@ class Simulator: public Process {
         Reserve* CTR; /**< Reserve at Nelahozeves. Connected directly to Central. */
         // central
         Central* CentralaKralupy; /**< Central at Kralupy. */
+        bool skipping = false; /**< Skipping mode (no print). */
 
         // inputs and output
         // inputs
