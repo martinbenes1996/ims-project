@@ -139,20 +139,20 @@ class Central {
             // if there is too much oil in central
             else {
                 // send oil to reserve
-                //double missing = CTR->Missing();        // how much oil is missing in reserve to ideal
+                double missing = CTR->Missing();        // how much oil is missing in reserve to ideal
                 double canSend = oilToday - demandOil;  // how much oil can be sent but still satisfy demand
-                if(/*missing != 0.0 &&*/ canSend != 0.0) {
+                if(missing != 0.0 && canSend != 0.0) {
                     #ifdef DISTRIBUTE_LOG
                         std::cerr << Time << ") Central: Sending " << ((missing<=canSend)?missing:canSend) << " to CTR\n";
                     #endif
                     // send all that is over demand ???
                     // send up to canSend value or full missing chunk
-                    //CTR->Send((missing<=canSend)?missing:canSend);
+                    CTR->Send((missing<=canSend)?missing:canSend);
                     // update the amount of oil in central
-                    //oilToday = (missing<=canSend)?oilToday-missing:oilToday-canSend;
-                    double returnOil;
-                    returnOil = CTR->Send(canSend);
-                    oilToday -= (canSend-returnOil);
+                    oilToday = (missing<=canSend)?oilToday-missing:oilToday-canSend;
+                    //double returnOil;
+                    //returnOil = CTR->Send(canSend);
+                    //oilToday -= (canSend-returnOil);
                 }
             }
             double overflow = 0.0;      /**< Stores oil that could not fit in refinery. */
