@@ -125,7 +125,7 @@ void Simulator::TerminalLoop() {
                     int satisfy = (CTR->Level()/oilNeed);
                     std::string satisfyS = (satisfy < 90) ? red( double2str(satisfy) ) : green( double2str(satisfy) );
                     if(oilNeed < 0) satisfyS = green("eternity");
-                    std::cout << "Current demand can be (at least partially) satisfied for " << satisfyS << "\n\n";
+                    std::cout << "Current demand can be (at least partially) satisfied for " << satisfyS << " days.\n\n";
                 // benzin
                 } else if(split[1] == "benzin"
                        || split[1] == "natural"
