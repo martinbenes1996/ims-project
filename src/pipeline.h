@@ -38,7 +38,7 @@ class Source : public Process {
          */
         Source(std::string name, double production, Callback output):
             mname(name), mproduction(production), moutput(output) {}
-        
+
         /**
          * @brief Overriden function, called through event in calendar.
          */
@@ -233,14 +233,14 @@ class OilPipeline {
          * @brief Production setter.
          * @param production    New production value.
          */
-        void setProduction(double production) { s->setProduction(production); }
+        void setProduction(double production) { s->setProduction((production<=mmaximum)?production:mmaximum); }
 
         /**
          * @brief Status getter.
          * @returns Status of the pipeline.
          */
         PipelineStatus getStatus();
-        
+
 
     private:
         std::string mname; /**< Pipeline name. */

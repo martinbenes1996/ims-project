@@ -266,6 +266,9 @@ void Simulator::TerminalLoop() {
                 newinput = true;
                 std::cout << bold("Console commands: \n");
                 std::cout << italic("Next") << "                          Count next day.\n";
+                std::cout << italic("Import") << "                        Print current import.\n";
+                std::cout << italic("Import <comodity>") << "             Print current import of comodity.\n";
+                std::cout << italic("Import <comodity> <number>") << "    Set current import of comodity.\n";
                 std::cout << italic("Demand") << "                        Print current demand.\n";
                 std::cout << italic("Demand <comodity>") << "             Print current demand of comodity.\n";
                 std::cout << italic("Demand <comodity> <number>") << "    Set current demand of comodity.\n";
@@ -359,7 +362,7 @@ void Simulator::TerminalLoop() {
                     ctrstat.print();
                     std::cout << "\n";
                 }
-            
+
             // import
             } else if(split[0] == "import" || split[0] == "i") {
                 newinput = true;
