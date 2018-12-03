@@ -267,17 +267,15 @@ class InputLimiter {
         /**
          * @brief Saturates the input.
          * @param amount        Input.
-         * @param basis         Base, not counted to input.
          * @returns Limited input.
          */
-        double output(double amount, double basis=0) { return (amount < (mmaximum-basis))?amount:(mmaximum-basis); }
+        double output(double amount) { return (amount < mmaximum)?amount:mmaximum; }
         /**
          * @brief Saturates the input. Returns the cropped part.
          * @param amount        Input.
-         * @param basis         Base, not counted to input.
          * @returns Cropped part of input.
          */
-        double rest(double amount, double basis=0) { return (amount < (mmaximum-basis))?0:(amount-mmaximum+basis); }
+        double rest(double amount) { return (amount < mmaximum)?0:(amount-mmaximum); }
 
         /**
          * @brief Maximum getter.

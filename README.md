@@ -15,7 +15,9 @@ The whole model is controlled via console. User can manage it
 with following commands
 
 - next / n *computes another day*
+- status [facility] *prints status*
 - demand / d [comodity [<number>]] *manages demand*
+- import / i [comodity [<number>]] *manages import*
 - break / b [facility] *breaks facility*
 - fix / f [facility] *fixes facility*
 - quit / q / exit *exits*

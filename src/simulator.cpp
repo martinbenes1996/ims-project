@@ -269,6 +269,9 @@ void Simulator::TerminalLoop() {
                 std::cout << italic("Demand") << "                        Print current demand.\n";
                 std::cout << italic("Demand <comodity>") << "             Print current demand of comodity.\n";
                 std::cout << italic("Demand <comodity> <number>") << "    Set current demand of comodity.\n";
+                std::cout << italic("Import") << "                        Print current import.\n";
+                std::cout << italic("Import <comodity>") << "             Print current import of comodity.\n";
+                std::cout << italic("Import <comodity> <number>") << "    Set current import of comodity.\n";
                 std::cout << italic("Break <facility>") << "              Breaks facility.\n";
                 std::cout << italic("Fix <facility>") << "                Fixes facility.\n";
                 std::cout << italic("Status") << "                        Prints status of system at current day.\n";
