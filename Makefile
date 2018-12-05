@@ -18,6 +18,14 @@ run:
 	@printf "";\
 	./model
 
+# zip
+.PHONY: zip
+zip:
+	@printf "";\
+	rm -rf 01_xbenes49_xpolan09.zip
+	@echo "Zipping files into 01_xbenes49_xpolan09.zip";\
+	zip 01_xbenes49_xpolan09.zip src/*.h src/*.cpp src/Makefile Makefile documentation.pdf
+
 # clean
 .PHONY: clean
 clean:
