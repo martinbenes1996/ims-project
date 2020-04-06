@@ -1,5 +1,5 @@
 # IMS Project
-This is project for Modelling and simulation subject.
+This is project for Modelling and simulation subject. It models crude oil imports to Czech Republic and its consequent processing towards demand. It is used for simulation of cut and decrease of crude oil to Czechia and potential scenarios.
 
 # Usage
 First, you need to install simlib library. It is included here.
